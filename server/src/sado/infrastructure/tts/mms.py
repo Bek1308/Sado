@@ -37,6 +37,6 @@ class MmsSpeechSynthesizer:
                 tokenizer = AutoTokenizer.from_pretrained(self._model_id)
                 model = VitsModel.from_pretrained(self._model_id)
                 # transformers wraps `to` with a decorator whose type hints drop the bound `self`.
-                model.to(self._device)  # type: ignore[arg-type]
+                model.to(self._device)  # type: ignore[arg-type, unused-ignore]
                 self._loaded = (model, tokenizer)
             return self._loaded
