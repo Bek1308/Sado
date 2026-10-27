@@ -1,6 +1,6 @@
-# Ovoz
+# Sado
 
-A voice-first AI assistant for Tajik and Uzbek speakers, built on Meta's Muse models.
+**Sado** ("voice" in Tajik and Uzbek) is a voice-first AI assistant for Tajik and Uzbek speakers, built on Meta's Muse models.
 
 Built for the **Meta Global AI Developer Hackathon** (Oct 26 – Nov 4, 2026), Indie track.
 
