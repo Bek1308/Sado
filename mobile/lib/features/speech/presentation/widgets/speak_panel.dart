@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
+import 'package:sado/features/speech/presentation/widgets/expression_cue_bar.dart';
 import 'package:sado/features/voices/presentation/providers/voice_providers.dart';
 import 'package:sado/features/voices/presentation/widgets/voice_picker.dart';
 
@@ -62,6 +63,7 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
             hintText: 'Type something for Sado to say',
           ),
         ),
+        ExpressionCueBar(controller: _textController),
         FilledButton.icon(
           onPressed: speaking.isLoading ? null : _speak,
           icon: speaking.isLoading
