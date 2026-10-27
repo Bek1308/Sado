@@ -16,6 +16,7 @@ _MAX_TEXT_LENGTH = 1_000
 class SpeakRequest(BaseModel):
     text: str = Field(min_length=1, max_length=_MAX_TEXT_LENGTH)
     language: Language
+    voice: str | None = None
 
 
 @router.post(
@@ -27,5 +28,5 @@ def speak(
     request: SpeakRequest,
     speak_text: Annotated[SpeakText, Depends(get_speak_text)],
 ) -> Response:
-    audio = speak_text.execute(request.text, request.language)
+    audio = speak_text.execute(request.text, request.language, request.voice)
     return Response(content=audio.wav_bytes, media_type=Audio.media_type)

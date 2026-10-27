@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     use_omnivoice: bool = True
     omnivoice_device: str = "cuda"
     omnivoice_uzbek_code: str = "uz"
-    voice_description: str = "male, moderate pitch"
+    default_voice: str = "sado"
 
     mms_device: str = "cpu"
     voice_speaking_rate: float = 1.0

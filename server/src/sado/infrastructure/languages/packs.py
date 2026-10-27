@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from sado.domain.language import Language
@@ -33,7 +34,7 @@ class VoiceConfig:
     use_omnivoice: bool
     omnivoice_device: str
     omnivoice_uzbek_code: str
-    voice_description: str
+    omnivoice_descriptions: Mapping[str, str]
     mms_device: str
     mms_voice: VitsVoiceSettings
 
@@ -62,5 +63,5 @@ def _build_synthesizer(
         return mms
 
     code = config.omnivoice_uzbek_code if language is Language.UZBEK else language.value
-    preferred = OmniVoiceSynthesizer(omnivoice, code, config.voice_description)
+    preferred = OmniVoiceSynthesizer(omnivoice, code, config.omnivoice_descriptions)
     return FallbackSynthesizer(primary=preferred, fallback=mms)

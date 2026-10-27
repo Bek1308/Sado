@@ -14,3 +14,9 @@ class UnsupportedLanguageError(SadoError):
     def __init__(self, language: Language) -> None:
         super().__init__(f"No language pack is available for '{language}'")
         self.language = language
+
+
+class UnknownVoiceError(SadoError):
+    def __init__(self, voice_id: str) -> None:
+        super().__init__(f"There is no voice called '{voice_id}'")
+        self.voice_id = voice_id

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sado.domain.audio import Audio
+from sado.domain.voice import Voice
 from sado.infrastructure.tts.wav import encode_pcm16_wav
 
 if TYPE_CHECKING:
@@ -45,8 +47,9 @@ class OmniVoiceEngine:
 class OmniVoiceSynthesizer:
     engine: OmniVoiceEngine
     language: str
-    voice_description: str
+    descriptions: Mapping[str, str]
+    """OmniVoice voice-design description for each voice id."""
 
-    def synthesize(self, text: str) -> Audio:
-        samples = self.engine.generate(text, self.language, self.voice_description)
+    def synthesize(self, text: str, voice: Voice) -> Audio:
+        samples = self.engine.generate(text, self.language, self.descriptions[voice.id])
         return Audio(encode_pcm16_wav(samples, _SAMPLE_RATE))

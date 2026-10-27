@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from sado.domain.audio import Audio
 from sado.domain.speech import SpeechSynthesizer
+from sado.domain.voice import Voice
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,8 @@ class TransliteratingSynthesizer:
     inner: SpeechSynthesizer
     transliterate: Callable[[str], str]
 
-    def synthesize(self, text: str) -> Audio:
-        return self.inner.synthesize(self.transliterate(text))
+    def synthesize(self, text: str, voice: Voice) -> Audio:
+        return self.inner.synthesize(self.transliterate(text), voice)
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,9 +27,9 @@ class FallbackSynthesizer:
     primary: SpeechSynthesizer
     fallback: SpeechSynthesizer
 
-    def synthesize(self, text: str) -> Audio:
+    def synthesize(self, text: str, voice: Voice) -> Audio:
         try:
-            return self.primary.synthesize(text)
+            return self.primary.synthesize(text, voice)
         except Exception:
             logger.exception("Primary voice failed; speaking with the fallback voice")
-            return self.fallback.synthesize(text)
+            return self.fallback.synthesize(text, voice)

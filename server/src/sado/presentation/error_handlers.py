@@ -1,11 +1,17 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from sado.domain.errors import EmptyTextError, SadoError, UnsupportedLanguageError
+from sado.domain.errors import (
+    EmptyTextError,
+    SadoError,
+    UnknownVoiceError,
+    UnsupportedLanguageError,
+)
 
 _STATUS_BY_ERROR: dict[type[SadoError], int] = {
     EmptyTextError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnsupportedLanguageError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    UnknownVoiceError: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 
