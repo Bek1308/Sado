@@ -28,6 +28,8 @@ _MONTHS = (
     "yanvar|fevral|mart|aprel|may|iyun|iyul|avgust|sentabr|sentyabr|oktabr|oktyabr|noyabr|dekabr"
 )
 _LETTERS = r"[^\W\d_]+"
+# Case endings people often type apart from a number; they still belong to it.
+_DETACHED_SUFFIXES = "dagi|dan|da|gacha|ga|ning|ni|ta"
 
 _LATIN_NAMES = {
     "whatsapp": "vatsap",
@@ -179,9 +181,10 @@ def build_uzbek_normalizer() -> RulePipelineNormalizer:
                 lambda m: spell_uzbek_ordinal(int(m["day"])) + " ",
                 re.IGNORECASE,
             ),
-            # A suffix written right after the digits joins the number: "5ta" -> "beshta".
+            # A suffix joins the number, whether attached or typed apart:
+            # "5ta" -> "beshta", "soat 10 da" -> "soat oʻnda".
             regex_rule(
-                rf"(?P<number>\d+)(?P<suffix>{_LETTERS})",
+                rf"(?P<number>\d+)(?:\s+(?=(?:{_DETACHED_SUFFIXES})\b))?(?P<suffix>{_LETTERS})",
                 lambda m: spell_uzbek_number(int(m["number"])) + m["suffix"],
             ),
             plain_number_rule(spell_uzbek_number, decimal_word="butun", percent_word="foiz"),
