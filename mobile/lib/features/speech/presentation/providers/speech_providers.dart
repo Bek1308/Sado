@@ -29,11 +29,15 @@ class SpeakController extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<void> speak(String text, SpokenLanguage language) async {
+  Future<void> speak(
+    String text,
+    SpokenLanguage language, {
+    String? voiceId,
+  }) async {
     state = const AsyncLoading();
     final result = await ref
         .read(speakTextProvider)
-        .call(text: text, language: language);
+        .call(text: text, language: language, voiceId: voiceId);
     state = switch (result) {
       Ok() => const AsyncData(null),
       Err(:final failure) => AsyncError(failure, StackTrace.current),

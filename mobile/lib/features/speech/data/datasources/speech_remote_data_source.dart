@@ -13,10 +13,15 @@ class SpeechRemoteDataSource {
   Future<Uint8List> synthesize({
     required String text,
     required SpokenLanguage language,
+    String? voiceId,
   }) async {
     final response = await _httpClient.post<List<int>>(
       _speechPath,
-      data: {'text': text, 'language': language.code},
+      data: {
+        'text': text,
+        'language': language.code,
+        'voice': ?voiceId,
+      },
       options: Options(responseType: ResponseType.bytes),
     );
     return Uint8List.fromList(response.data!);

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
+import 'package:sado/features/voices/presentation/providers/voice_providers.dart';
+import 'package:sado/features/voices/presentation/widgets/voice_picker.dart';
 
 class SpeakPanel extends ConsumerStatefulWidget {
   const SpeakPanel({super.key});
@@ -24,7 +26,9 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
   Future<void> _speak() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
-    await ref.read(speakControllerProvider.notifier).speak(text, _language);
+    await ref
+        .read(speakControllerProvider.notifier)
+        .speak(text, _language, voiceId: ref.read(selectedVoiceIdProvider));
   }
 
   @override
@@ -36,6 +40,7 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 12,
       children: [
+        const VoicePicker(),
         SegmentedButton<SpokenLanguage>(
           segments: [
             for (final language in SpokenLanguage.values)

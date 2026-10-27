@@ -16,10 +16,15 @@ final class SpeechRepositoryImpl implements SpeechRepository {
   Future<Result<Uint8List>> synthesize({
     required String text,
     required SpokenLanguage language,
+    String? voiceId,
   }) async {
     try {
       return Ok(
-        await _remoteDataSource.synthesize(text: text, language: language),
+        await _remoteDataSource.synthesize(
+          text: text,
+          language: language,
+          voiceId: voiceId,
+        ),
       );
     } on DioException catch (error) {
       return Err(error.toFailure());

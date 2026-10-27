@@ -12,8 +12,13 @@ final class SpeakText {
   Future<Result<void>> call({
     required String text,
     required SpokenLanguage language,
+    String? voiceId,
   }) async {
-    final result = await _repository.synthesize(text: text, language: language);
+    final result = await _repository.synthesize(
+      text: text,
+      language: language,
+      voiceId: voiceId,
+    );
     switch (result) {
       case Ok(:final value):
         await _audioOutput.playWav(value);
