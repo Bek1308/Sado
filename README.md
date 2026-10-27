@@ -134,6 +134,8 @@ Adding a language means adding a **language pack** — speech models, voice and 
 
 Sado is being built live during the hackathon. All code in this repository was written from **27 October 2026**.
 
+📐 [Engineering principles](docs/ENGINEERING.md) · 🗺️ [Roadmap](docs/ROADMAP.md)
+
 - [x] Project setup
 - [ ] Flutter app: voice button, camera, Sado's face
 - [ ] Hear: speech-to-text router (Muse Voice Transcribe + Omnilingual ASR)
