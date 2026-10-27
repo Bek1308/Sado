@@ -10,9 +10,14 @@ from sado.infrastructure.languages.uzbek import (
     build_uzbek_normalizer,
     transliterate_uzbek_to_cyrillic,
 )
-from sado.infrastructure.tts.decorators import FallbackSynthesizer, TransliteratingSynthesizer
+from sado.infrastructure.tts.decorators import (
+    CueFreeSynthesizer,
+    FallbackSynthesizer,
+    TransliteratingSynthesizer,
+)
 from sado.infrastructure.tts.mms import MmsSpeechSynthesizer, VitsVoiceSettings
 from sado.infrastructure.tts.omnivoice import OmniVoiceEngine, OmniVoiceSynthesizer
+from sado.infrastructure.tts.voice_presets import VoiceStyle
 
 _NORMALIZERS: dict[Language, TextNormalizer] = {
     Language.TAJIK: build_tajik_normalizer(),
@@ -34,7 +39,7 @@ class VoiceConfig:
     use_omnivoice: bool
     omnivoice_device: str
     omnivoice_uzbek_code: str
-    omnivoice_descriptions: Mapping[str, str]
+    voice_styles: Mapping[str, VoiceStyle]
     mms_device: str
     mms_voice: VitsVoiceSettings
 
@@ -54,8 +59,8 @@ def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
 def _build_synthesizer(
     language: Language, config: VoiceConfig, omnivoice: OmniVoiceEngine | None
 ) -> SpeechSynthesizer:
-    mms: SpeechSynthesizer = MmsSpeechSynthesizer(
-        _MMS_MODEL_IDS[language], config.mms_voice, config.mms_device
+    mms: SpeechSynthesizer = CueFreeSynthesizer(
+        MmsSpeechSynthesizer(_MMS_MODEL_IDS[language], config.mms_voice, config.mms_device)
     )
     if language is Language.UZBEK:
         mms = TransliteratingSynthesizer(mms, transliterate_uzbek_to_cyrillic)
@@ -63,5 +68,5 @@ def _build_synthesizer(
         return mms
 
     code = config.omnivoice_uzbek_code if language is Language.UZBEK else language.value
-    preferred = OmniVoiceSynthesizer(omnivoice, code, config.omnivoice_descriptions)
+    preferred = OmniVoiceSynthesizer(omnivoice, code, config.voice_styles)
     return FallbackSynthesizer(primary=preferred, fallback=mms)

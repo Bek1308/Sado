@@ -3,6 +3,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from sado.domain.audio import Audio
+from sado.domain.expression import remove_expression_cues
 from sado.domain.speech import SpeechSynthesizer
 from sado.domain.voice import Voice
 
@@ -18,6 +19,16 @@ class TransliteratingSynthesizer:
 
     def synthesize(self, text: str, voice: Voice) -> Audio:
         return self.inner.synthesize(self.transliterate(text), voice)
+
+
+@dataclass(frozen=True, slots=True)
+class CueFreeSynthesizer:
+    """Drops expression cues for engines that would otherwise read "[laugh]" aloud."""
+
+    inner: SpeechSynthesizer
+
+    def synthesize(self, text: str, voice: Voice) -> Audio:
+        return self.inner.synthesize(remove_expression_cues(text), voice)
 
 
 @dataclass(frozen=True, slots=True)

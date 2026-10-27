@@ -27,9 +27,7 @@ def _voice_config(settings: Settings) -> VoiceConfig:
         use_omnivoice=settings.use_omnivoice,
         omnivoice_device=settings.omnivoice_device,
         omnivoice_uzbek_code=settings.omnivoice_uzbek_code,
-        omnivoice_descriptions={
-            preset.voice.id: preset.omnivoice_description for preset in VOICE_PRESETS
-        },
+        voice_styles={preset.voice.id: preset.style for preset in VOICE_PRESETS},
         mms_device=settings.mms_device,
         mms_voice=VitsVoiceSettings(
             speaking_rate=settings.voice_speaking_rate,

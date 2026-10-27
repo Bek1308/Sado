@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sado.domain.audio import Audio
+from sado.domain.expression import EXPRESSION_CUE, Expression
 from sado.domain.voice import Voice
+from sado.infrastructure.tts.voice_presets import VoiceStyle
 from sado.infrastructure.tts.wav import encode_pcm16_wav
 
 if TYPE_CHECKING:
@@ -14,6 +16,19 @@ if TYPE_CHECKING:
 
 _MODEL_ID = "k2-fsa/OmniVoice"
 _SAMPLE_RATE = 24_000
+
+# OmniVoice performs these inline non-verbal tags as sounds rather than words.
+_OMNIVOICE_TAGS = {
+    Expression.LAUGH: "[laughter]",
+    Expression.SIGH: "[sigh]",
+    Expression.SURPRISE: "[surprise-oh]",
+    Expression.QUESTION: "[question-ah]",
+    Expression.HMM: "[dissatisfaction-hnn]",
+}
+
+
+def to_omnivoice_tags(text: str) -> str:
+    return EXPRESSION_CUE.sub(lambda match: _OMNIVOICE_TAGS[Expression(match[1])], text)
 
 
 class OmniVoiceEngine:
@@ -25,10 +40,13 @@ class OmniVoiceEngine:
         self._lock = threading.Lock()
         self._model: OmniVoice | None = None
 
-    def generate(self, text: str, language: str, voice_description: str) -> list[float]:
+    def generate(self, text: str, language: str, style: VoiceStyle) -> list[float]:
         with self._lock:
             audio: Any = self._load().generate(
-                text=text, language=language, instruct=voice_description
+                text=text,
+                language=language,
+                instruct=style.omnivoice_description,
+                speed=style.speed,
             )
         samples = audio[0] if isinstance(audio, list) else audio
         return [float(sample) for sample in samples]
@@ -47,9 +65,11 @@ class OmniVoiceEngine:
 class OmniVoiceSynthesizer:
     engine: OmniVoiceEngine
     language: str
-    descriptions: Mapping[str, str]
-    """OmniVoice voice-design description for each voice id."""
+    styles: Mapping[str, VoiceStyle]
+    """How each voice id sounds."""
 
     def synthesize(self, text: str, voice: Voice) -> Audio:
-        samples = self.engine.generate(text, self.language, self.descriptions[voice.id])
+        samples = self.engine.generate(
+            to_omnivoice_tags(text), self.language, self.styles[voice.id]
+        )
         return Audio(encode_pcm16_wav(samples, _SAMPLE_RATE))

@@ -4,6 +4,8 @@ import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from sado.domain.expression import Expression, split_expression_cues
+
 type TextRule = Callable[[str], str]
 type NumberSpeller = Callable[[int], str]
 type MatchReplacer = Callable[[re.Match[str]], str]
@@ -11,11 +13,20 @@ type MatchReplacer = Callable[[re.Match[str]], str]
 
 @dataclass(frozen=True, slots=True)
 class RulePipelineNormalizer:
-    """Applies rules in order. Order matters: specific patterns must run before generic ones."""
+    """Applies rules in order. Order matters: specific patterns must run before generic ones.
+
+    Expression cues such as "[laugh]" pass through untouched; only the words around them change.
+    """
 
     rules: Sequence[TextRule]
 
     def normalize(self, text: str) -> str:
+        return "".join(
+            f"[{part}]" if isinstance(part, Expression) else self._apply_rules(part)
+            for part in split_expression_cues(text)
+        )
+
+    def _apply_rules(self, text: str) -> str:
         for rule in self.rules:
             text = rule(text)
         return text
