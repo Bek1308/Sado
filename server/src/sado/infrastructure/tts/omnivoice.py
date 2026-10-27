@@ -9,11 +9,9 @@ from sado.domain.audio import Audio
 from sado.domain.expression import EXPRESSION_CUE, Expression
 from sado.domain.mood import Mood
 from sado.domain.voice import Voice
-from sado.infrastructure.tts.mood_references import (
-    MOOD_SCRIPTS,
-    MoodReference,
-    MoodReferenceLibrary,
-)
+from sado.infrastructure.tts.audio_tools import join_with_pauses, trim_silence
+from sado.infrastructure.tts.mood_references import MoodReference, MoodReferenceLibrary
+from sado.infrastructure.tts.sentences import split_into_sentences
 from sado.infrastructure.tts.voice_presets import VoiceStyle
 from sado.infrastructure.tts.wav import encode_pcm16_wav
 
@@ -22,6 +20,8 @@ if TYPE_CHECKING:
 
 _MODEL_ID = "k2-fsa/OmniVoice"
 SAMPLE_RATE = 24_000
+_PAUSE_BETWEEN_SENTENCES = int(SAMPLE_RATE * 0.2)
+_EDGE_MARGIN = int(SAMPLE_RATE * 0.03)
 
 # OmniVoice performs these inline non-verbal tags as sounds rather than words.
 _OMNIVOICE_TAGS = {
@@ -55,22 +55,17 @@ class OmniVoiceEngine:
         self._lock = threading.Lock()
         self._model: OmniVoice | None = None
 
-    def design(self, text: str, language: str, style: VoiceStyle, speed: float) -> list[float]:
-        """Speaks with a voice described in words; neutral delivery."""
-        return self._generate(
-            text=text, language=language, instruct=style.omnivoice_description, speed=speed
-        )
+    def design(self, text: str, language: str, style: VoiceStyle) -> list[float]:
+        """Speaks with a voice described in words. Each call may sound like a different person."""
+        return self._generate(text=text, language=language, instruct=style.omnivoice_description)
 
-    def clone(
-        self, text: str, language: str, reference: MoodReference, speed: float
-    ) -> list[float]:
+    def clone(self, text: str, language: str, reference: MoodReference) -> list[float]:
         """Speaks with the voice and delivery of a reference clip."""
         return self._generate(
             text=text,
             language=language,
             ref_audio=str(reference.audio_path),
             ref_text=reference.transcript,
-            speed=speed,
             num_step=self._clone_quality.num_steps,
             guidance_scale=self._clone_quality.guidance_scale,
         )
@@ -96,17 +91,21 @@ class OmniVoiceSynthesizer:
     engine: OmniVoiceEngine
     language: str
     styles: Mapping[str, VoiceStyle]
-    """How each voice id sounds."""
-    mood_references: MoodReferenceLibrary
+    """How each voice id sounds when it has no reference clip yet."""
+    references: MoodReferenceLibrary
 
     def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
-        style = self.styles[voice.id]
-        spoken = to_omnivoice_tags(text)
-        reference = self.mood_references.find(voice.id, mood)
-        if reference is not None:
-            samples = self.engine.clone(spoken, self.language, reference, style.speed)
-        else:
-            # Without a reference the mood can still set the pace, even if not the feeling.
-            speed = style.speed * (MOOD_SCRIPTS[mood].speed if mood in MOOD_SCRIPTS else 1.0)
-            samples = self.engine.design(spoken, self.language, style, speed)
+        reference = self.references.find(voice.id, mood)
+        pieces = [
+            trim_silence(self._speak_sentence(sentence, voice, reference), keep=_EDGE_MARGIN)
+            for sentence in split_into_sentences(to_omnivoice_tags(text))
+        ]
+        samples = join_with_pauses(pieces, _PAUSE_BETWEEN_SENTENCES)
         return Audio(encode_pcm16_wav(samples, SAMPLE_RATE))
+
+    def _speak_sentence(
+        self, sentence: str, voice: Voice, reference: MoodReference | None
+    ) -> list[float]:
+        if reference is not None:
+            return self.engine.clone(sentence, self.language, reference)
+        return self.engine.design(sentence, self.language, self.styles[voice.id])

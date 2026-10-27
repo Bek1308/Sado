@@ -1,8 +1,8 @@
-"""Mood references: short clips that teach OmniVoice how a voice sounds in a given mood.
+"""Reference clips that OmniVoice clones every sentence from.
 
-OmniVoice's voice design cannot express emotion, but voice cloning copies the delivery of its
-reference clip: pace, intonation and feeling. So each mood is first performed once from an
-expressive script, saved, and from then on every sentence in that mood is cloned from it.
+Each voice has a neutral anchor clip: its one true recording. Cloning every sentence from the
+same anchor keeps the voice identical from sentence to sentence. Moods are recorded once by
+cloning the anchor on an expressive script, so the feeling changes but the voice does not.
 """
 
 from dataclasses import dataclass
@@ -10,32 +10,23 @@ from pathlib import Path
 
 from sado.domain.mood import Mood
 
-
-@dataclass(frozen=True, slots=True)
-class MoodScript:
-    """What a voice says, and how fast, to perform a mood for its reference clip."""
-
-    text: str
-    speed: float
-
-
 MOOD_SCRIPTS = {
-    Mood.HAPPY: MoodScript(
-        "Voy, qanday ajoyib yangilik! [laughter] Men juda xursandman, rahmat sizga!", 1.08
+    Mood.NEUTRAL: (
+        "Assalomu alaykum. Men sizning ovozli yordamchingizman. "
+        "Bugun sizga qanday yordam bera olaman?"
     ),
-    Mood.CALM: MoodScript(
-        "Hammasi joyida. Shoshilmang, chuqur nafas oling. Biz buni birga, sekin-asta hal qilamiz.",
-        0.9,
+    Mood.HAPPY: "Voy, qanday ajoyib yangilik! [laughter] Men juda xursandman, rahmat sizga!",
+    Mood.CALM: (
+        "Hammasi joyida. Shoshilmang, chuqur nafas oling. Biz buni birga, sekin-asta hal qilamiz."
     ),
-    Mood.SAD: MoodScript(
-        "[sigh] Afsuski, bu safar omad kulib boqmadi... Lekin xafa boʻlmang, hali hammasi oldinda.",
-        0.85,
+    Mood.SAD: (
+        "[sigh] Afsuski, bu safar omad kulib boqmadi... Lekin xafa boʻlmang, hali hammasi oldinda."
     ),
-    Mood.EXCITED: MoodScript(
-        "Tezroq qarang! [surprise-oh] Bu haqiqatan ham ajoyib! Men buni kutib turolmayapman!", 1.15
+    Mood.EXCITED: (
+        "Tezroq qarang! [surprise-oh] Bu haqiqatan ham ajoyib! Men buni kutib turolmayapman!"
     ),
-    Mood.SERIOUS: MoodScript(
-        "Diqqat qiling. Bu juda muhim masala. Hujjatni oʻz vaqtida topshirishingiz shart.", 0.95
+    Mood.SERIOUS: (
+        "Diqqat qiling. Bu juda muhim masala. Hujjatni oʻz vaqtida topshirishingiz shart."
     ),
 }
 MOOD_SCRIPT_LANGUAGE = "uz"
@@ -48,22 +39,29 @@ class MoodReference:
 
 
 class MoodReferenceLibrary:
-    """Reference clips stored as `<root>/<voice id>/<mood>.wav` with a `.txt` transcript."""
+    """Clips stored as `<root>/<voice id>/<mood>.wav` with a `.txt` transcript."""
 
     def __init__(self, root: Path) -> None:
         self._root = root
 
     def find(self, voice_id: str, mood: Mood) -> MoodReference | None:
-        audio_path, transcript_path = self._paths(voice_id, mood)
-        if not (audio_path.is_file() and transcript_path.is_file()):
-            return None
-        return MoodReference(audio_path, transcript_path.read_text(encoding="utf-8"))
+        """The clip for this mood, or the voice's neutral anchor when the mood has none."""
+        return self._find_exact(voice_id, mood) or self._find_exact(voice_id, Mood.NEUTRAL)
 
     def save(self, voice_id: str, mood: Mood, wav_bytes: bytes, transcript: str) -> None:
         audio_path, transcript_path = self._paths(voice_id, mood)
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         audio_path.write_bytes(wav_bytes)
         transcript_path.write_text(transcript, encoding="utf-8")
+
+    def has(self, voice_id: str, mood: Mood) -> bool:
+        return self._find_exact(voice_id, mood) is not None
+
+    def _find_exact(self, voice_id: str, mood: Mood) -> MoodReference | None:
+        audio_path, transcript_path = self._paths(voice_id, mood)
+        if not (audio_path.is_file() and transcript_path.is_file()):
+            return None
+        return MoodReference(audio_path, transcript_path.read_text(encoding="utf-8"))
 
     def _paths(self, voice_id: str, mood: Mood) -> tuple[Path, Path]:
         base = self._root / voice_id / mood.value
