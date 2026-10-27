@@ -9,6 +9,8 @@ in the language you actually speak, not the one AI happens to support.
 
 *Built on Meta's Muse models for the Meta Global AI Developer Hackathon 2026 · Indie track*
 
+[![CI](https://github.com/Bek1308/Sado/actions/workflows/ci.yml/badge.svg)](https://github.com/Bek1308/Sado/actions/workflows/ci.yml)
+
 </div>
 
 ---
@@ -136,7 +138,7 @@ Sado is being built live during the hackathon. All code in this repository was w
 
 📐 [Engineering principles](docs/ENGINEERING.md) · 🗺️ [Roadmap](docs/ROADMAP.md)
 
-- [x] Project setup
+- [x] Foundations: server and mobile skeletons, Clean Architecture, CI
 - [ ] Flutter app: voice button, camera, Sado's face
 - [ ] Hear: speech-to-text router (Muse Voice Transcribe + Omnilingual ASR)
 - [ ] Think: Muse Spark agent loop with tools
