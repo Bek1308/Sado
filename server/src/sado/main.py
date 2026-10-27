@@ -9,6 +9,7 @@ from sado.domain.language import Language
 from sado.domain.speech import LanguagePack
 from sado.infrastructure.languages.packs import build_language_packs
 from sado.infrastructure.settings import get_settings
+from sado.infrastructure.tts.mms import VitsVoiceSettings
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import health, speech
 
@@ -17,7 +18,12 @@ def create_app(language_packs: Mapping[Language, LanguagePack] | None = None) ->
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=settings.version)
 
-    packs = language_packs or build_language_packs(device=settings.speech_device)
+    voice = VitsVoiceSettings(
+        speaking_rate=settings.voice_speaking_rate,
+        pitch_variation=settings.voice_pitch_variation,
+        rhythm_variation=settings.voice_rhythm_variation,
+    )
+    packs = language_packs or build_language_packs(voice, device=settings.speech_device)
     app.state.speak_text = SpeakText(packs)
 
     register_error_handlers(app)

@@ -4,7 +4,7 @@ from sado.infrastructure.languages.english import build_english_normalizer
 from sado.infrastructure.languages.russian import build_russian_normalizer
 from sado.infrastructure.languages.tajik import build_tajik_normalizer
 from sado.infrastructure.languages.uzbek import build_uzbek_normalizer
-from sado.infrastructure.tts.mms import MmsSpeechSynthesizer
+from sado.infrastructure.tts.mms import MmsSpeechSynthesizer, VitsVoiceSettings
 
 _NORMALIZERS: dict[Language, TextNormalizer] = {
     Language.TAJIK: build_tajik_normalizer(),
@@ -21,12 +21,12 @@ _MMS_MODEL_IDS = {
 }
 
 
-def build_language_packs(device: str) -> dict[Language, LanguagePack]:
+def build_language_packs(voice: VitsVoiceSettings, device: str) -> dict[Language, LanguagePack]:
     return {
         language: LanguagePack(
             language=language,
             normalizer=_NORMALIZERS[language],
-            synthesizer=MmsSpeechSynthesizer(_MMS_MODEL_IDS[language], device=device),
+            synthesizer=MmsSpeechSynthesizer(_MMS_MODEL_IDS[language], voice, device),
         )
         for language in Language
     }
