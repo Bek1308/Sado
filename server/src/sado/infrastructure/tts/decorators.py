@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from sado.domain.audio import Audio
 from sado.domain.expression import remove_expression_cues
+from sado.domain.mood import Mood
 from sado.domain.speech import SpeechSynthesizer
 from sado.domain.voice import Voice
 
@@ -17,8 +18,8 @@ class TransliteratingSynthesizer:
     inner: SpeechSynthesizer
     transliterate: Callable[[str], str]
 
-    def synthesize(self, text: str, voice: Voice) -> Audio:
-        return self.inner.synthesize(self.transliterate(text), voice)
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
+        return self.inner.synthesize(self.transliterate(text), voice, mood)
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,8 +28,8 @@ class CueFreeSynthesizer:
 
     inner: SpeechSynthesizer
 
-    def synthesize(self, text: str, voice: Voice) -> Audio:
-        return self.inner.synthesize(remove_expression_cues(text), voice)
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
+        return self.inner.synthesize(remove_expression_cues(text), voice, mood)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,9 +39,9 @@ class FallbackSynthesizer:
     primary: SpeechSynthesizer
     fallback: SpeechSynthesizer
 
-    def synthesize(self, text: str, voice: Voice) -> Audio:
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
         try:
-            return self.primary.synthesize(text, voice)
+            return self.primary.synthesize(text, voice, mood)
         except Exception:
             logger.exception("Primary voice failed; speaking with the fallback voice")
-            return self.fallback.synthesize(text, voice)
+            return self.fallback.synthesize(text, voice, mood)

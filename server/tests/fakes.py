@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from sado.application.voices import VoiceCatalog
 from sado.domain.audio import Audio
 from sado.domain.language import Language
+from sado.domain.mood import Mood
 from sado.domain.speech import LanguagePack
 from sado.domain.voice import Voice
 
@@ -23,9 +24,11 @@ class UppercaseNormalizer:
 class RecordingSynthesizer:
     spoken: list[tuple[str, str]] = field(default_factory=list)
     """Every (text, voice id) pair this synthesizer was asked to speak."""
+    moods: list[Mood] = field(default_factory=list)
 
-    def synthesize(self, text: str, voice: Voice) -> Audio:
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
         self.spoken.append((text, voice.id))
+        self.moods.append(mood)
         return Audio(wav_bytes=f"wav:{voice.id}:{text}".encode())
 
 

@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
 from sado.domain.language import Language
 from sado.domain.speech import LanguagePack, SpeechSynthesizer, TextNormalizer
@@ -16,7 +17,8 @@ from sado.infrastructure.tts.decorators import (
     TransliteratingSynthesizer,
 )
 from sado.infrastructure.tts.mms import MmsSpeechSynthesizer, VitsVoiceSettings
-from sado.infrastructure.tts.omnivoice import OmniVoiceEngine, OmniVoiceSynthesizer
+from sado.infrastructure.tts.mood_references import MoodReferenceLibrary
+from sado.infrastructure.tts.omnivoice import CloneQuality, OmniVoiceEngine, OmniVoiceSynthesizer
 from sado.infrastructure.tts.voice_presets import VoiceStyle
 
 _NORMALIZERS: dict[Language, TextNormalizer] = {
@@ -40,12 +42,18 @@ class VoiceConfig:
     omnivoice_device: str
     omnivoice_uzbek_code: str
     voice_styles: Mapping[str, VoiceStyle]
+    mood_reference_dir: Path
+    clone_quality: CloneQuality
     mms_device: str
     mms_voice: VitsVoiceSettings
 
 
 def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
-    omnivoice = OmniVoiceEngine(config.omnivoice_device) if config.use_omnivoice else None
+    omnivoice = (
+        OmniVoiceEngine(config.omnivoice_device, config.clone_quality)
+        if config.use_omnivoice
+        else None
+    )
     return {
         language: LanguagePack(
             language=language,
@@ -68,5 +76,7 @@ def _build_synthesizer(
         return mms
 
     code = config.omnivoice_uzbek_code if language is Language.UZBEK else language.value
-    preferred = OmniVoiceSynthesizer(omnivoice, code, config.voice_styles)
+    preferred = OmniVoiceSynthesizer(
+        omnivoice, code, config.voice_styles, MoodReferenceLibrary(config.mood_reference_dir)
+    )
     return FallbackSynthesizer(primary=preferred, fallback=mms)

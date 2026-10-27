@@ -1,4 +1,5 @@
 from sado.domain.expression import Expression, remove_expression_cues, split_expression_cues
+from sado.domain.mood import Mood
 from sado.infrastructure.languages.tajik import build_tajik_normalizer
 from sado.infrastructure.languages.uzbek import build_uzbek_normalizer
 from sado.infrastructure.tts.decorators import CueFreeSynthesizer
@@ -38,6 +39,6 @@ def test_maps_cues_to_omnivoice_tags() -> None:
 def test_cue_free_synthesizer_strips_cues() -> None:
     inner = RecordingSynthesizer()
 
-    CueFreeSynthesizer(inner).synthesize("Voy! [surprise] Rostdanmi?", SADO_VOICE)
+    CueFreeSynthesizer(inner).synthesize("Voy! [surprise] Rostdanmi?", SADO_VOICE, Mood.NEUTRAL)
 
     assert inner.spoken == [("Voy! Rostdanmi?", "sado")]

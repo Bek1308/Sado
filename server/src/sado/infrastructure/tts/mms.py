@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from sado.domain.audio import Audio
+from sado.domain.mood import Mood
 from sado.domain.voice import Voice
 from sado.infrastructure.tts.wav import encode_pcm16_wav
 
@@ -30,7 +31,8 @@ class VitsVoiceSettings:
 class MmsSpeechSynthesizer:
     """Speech synthesis with Meta's MMS-TTS (VITS) models.
 
-    Each language has a single MMS speaker, so the requested voice cannot change how it sounds.
+    Each language has a single MMS speaker with a fixed delivery, so the requested voice and
+    mood cannot change how it sounds.
     """
 
     def __init__(
@@ -46,7 +48,7 @@ class MmsSpeechSynthesizer:
         self._lock = threading.Lock()
         self._loaded: tuple[VitsModel, PreTrainedTokenizerBase] | None = None
 
-    def synthesize(self, text: str, voice: Voice) -> Audio:
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio:
         import torch  # noqa: PLC0415 - heavy optional dependency, loaded only when speech is used
 
         with self._lock:

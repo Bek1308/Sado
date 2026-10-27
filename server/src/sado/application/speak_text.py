@@ -4,6 +4,7 @@ from sado.application.voices import VoiceCatalog
 from sado.domain.audio import Audio
 from sado.domain.errors import EmptyTextError, UnsupportedLanguageError
 from sado.domain.language import Language
+from sado.domain.mood import Mood
 from sado.domain.speech import LanguagePack
 
 
@@ -14,7 +15,13 @@ class SpeakText:
         self._language_packs = language_packs
         self._voices = voices
 
-    def execute(self, text: str, language: Language, voice_id: str | None = None) -> Audio:
+    def execute(
+        self,
+        text: str,
+        language: Language,
+        voice_id: str | None = None,
+        mood: Mood = Mood.NEUTRAL,
+    ) -> Audio:
         stripped_text = text.strip()
         if not stripped_text:
             raise EmptyTextError
@@ -25,4 +32,4 @@ class SpeakText:
 
         voice = self._voices.find(voice_id)
         spoken_text = pack.normalizer.normalize(stripped_text)
-        return pack.synthesizer.synthesize(spoken_text, voice)
+        return pack.synthesizer.synthesize(spoken_text, voice, mood)

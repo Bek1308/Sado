@@ -26,6 +26,12 @@ def test_speak_uses_the_requested_voice() -> None:
     assert response.content == b"wav:opa:SALOM"
 
 
+def test_speak_rejects_unknown_mood() -> None:
+    response = _client().post("/speech", json={"text": "salom", "language": "uz", "mood": "angry"})
+
+    assert response.status_code == 422
+
+
 def test_speak_rejects_unknown_voice() -> None:
     response = _client().post("/speech", json={"text": "salom", "language": "uz", "voice": "robot"})
 

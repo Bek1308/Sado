@@ -1,6 +1,7 @@
 """Composition root: the only place where layers are wired together."""
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from fastapi import FastAPI
 
@@ -11,6 +12,7 @@ from sado.domain.speech import LanguagePack
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
 from sado.infrastructure.settings import Settings, get_settings
 from sado.infrastructure.tts.mms import VitsVoiceSettings
+from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import health, speech, voices
@@ -28,6 +30,10 @@ def _voice_config(settings: Settings) -> VoiceConfig:
         omnivoice_device=settings.omnivoice_device,
         omnivoice_uzbek_code=settings.omnivoice_uzbek_code,
         voice_styles={preset.voice.id: preset.style for preset in VOICE_PRESETS},
+        mood_reference_dir=Path(settings.mood_reference_dir),
+        clone_quality=CloneQuality(
+            num_steps=settings.clone_num_steps, guidance_scale=settings.clone_guidance_scale
+        ),
         mms_device=settings.mms_device,
         mms_voice=VitsVoiceSettings(
             speaking_rate=settings.voice_speaking_rate,

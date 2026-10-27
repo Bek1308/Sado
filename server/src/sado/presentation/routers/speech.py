@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from sado.application.speak_text import SpeakText
 from sado.domain.audio import Audio
 from sado.domain.language import Language
+from sado.domain.mood import Mood
 from sado.presentation.dependencies import get_speak_text
 
 router = APIRouter(prefix="/speech", tags=["speech"])
@@ -17,6 +18,7 @@ class SpeakRequest(BaseModel):
     text: str = Field(min_length=1, max_length=_MAX_TEXT_LENGTH)
     language: Language
     voice: str | None = None
+    mood: Mood = Mood.NEUTRAL
 
 
 @router.post(
@@ -28,5 +30,5 @@ def speak(
     request: SpeakRequest,
     speak_text: Annotated[SpeakText, Depends(get_speak_text)],
 ) -> Response:
-    audio = speak_text.execute(request.text, request.language, request.voice)
+    audio = speak_text.execute(request.text, request.language, request.voice, request.mood)
     return Response(content=audio.wav_bytes, media_type=Audio.media_type)

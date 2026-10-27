@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     omnivoice_device: str = "cuda"
     omnivoice_uzbek_code: str = "uz"
     default_voice: str = "sado"
+    mood_reference_dir: str = "data/voices"
+    clone_num_steps: int = 64
+    clone_guidance_scale: float = 3.0
 
     mms_device: str = "cpu"
     voice_speaking_rate: float = 1.0

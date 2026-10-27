@@ -3,6 +3,7 @@ from typing import Protocol
 
 from sado.domain.audio import Audio
 from sado.domain.language import Language
+from sado.domain.mood import Mood
 from sado.domain.voice import Voice
 
 
@@ -13,7 +14,7 @@ class TextNormalizer(Protocol):
 
 
 class SpeechSynthesizer(Protocol):
-    def synthesize(self, text: str, voice: Voice) -> Audio: ...
+    def synthesize(self, text: str, voice: Voice, mood: Mood) -> Audio: ...
 
 
 @dataclass(frozen=True, slots=True)

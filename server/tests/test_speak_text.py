@@ -3,6 +3,7 @@ import pytest
 from sado.application.speak_text import SpeakText
 from sado.domain.errors import EmptyTextError, UnknownVoiceError, UnsupportedLanguageError
 from sado.domain.language import Language
+from sado.domain.mood import Mood
 from tests.fakes import fake_language_pack, fake_voice_catalog
 
 
@@ -26,6 +27,15 @@ def test_speaks_with_the_requested_voice() -> None:
     speak_text.execute("салом", Language.TAJIK, voice_id="opa")
 
     assert spoken == [("САЛОМ", "opa")]
+
+
+def test_passes_the_requested_mood_to_the_voice() -> None:
+    pack, synthesizer = fake_language_pack(Language.TAJIK)
+    speak_text = SpeakText({Language.TAJIK: pack}, fake_voice_catalog())
+
+    speak_text.execute("салом", Language.TAJIK, mood=Mood.HAPPY)
+
+    assert synthesizer.moods == [Mood.HAPPY]
 
 
 def test_rejects_unknown_voice() -> None:
