@@ -89,7 +89,7 @@ All code, comments and docs are written in English.
 | Area | Server | Mobile |
 |---|---|---|
 | Formatting | `ruff format` | `dart format` |
-| Linting | `ruff check` | `flutter analyze` with strict rules |
+| Linting | `ruff check` | `dart analyze` with `very_good_analysis` |
 | Types | `mypy --strict` | Sound null safety, strict casts |
 | Tests | `pytest` for domain and use cases | `flutter test` for domain and state |
 
