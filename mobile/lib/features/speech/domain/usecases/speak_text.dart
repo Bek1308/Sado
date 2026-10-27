@@ -1,5 +1,6 @@
 import 'package:sado/core/audio/audio_output.dart';
 import 'package:sado/core/error/result.dart';
+import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/domain/repositories/speech_repository.dart';
 
@@ -13,11 +14,13 @@ final class SpeakText {
     required String text,
     required SpokenLanguage language,
     String? voiceId,
+    Mood mood = Mood.neutral,
   }) async {
     final result = await _repository.synthesize(
       text: text,
       language: language,
       voiceId: voiceId,
+      mood: mood,
     );
     switch (result) {
       case Ok(:final value):

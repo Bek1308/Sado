@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
+import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
 import 'package:sado/features/speech/presentation/widgets/expression_cue_bar.dart';
@@ -17,6 +18,7 @@ class SpeakPanel extends ConsumerStatefulWidget {
 class _SpeakPanelState extends ConsumerState<SpeakPanel> {
   final _textController = TextEditingController();
   SpokenLanguage _language = SpokenLanguage.tajik;
+  Mood _mood = Mood.neutral;
 
   @override
   void dispose() {
@@ -29,7 +31,12 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
     if (text.isEmpty) return;
     await ref
         .read(speakControllerProvider.notifier)
-        .speak(text, _language, voiceId: ref.read(selectedVoiceIdProvider));
+        .speak(
+          text,
+          _language,
+          voiceId: ref.read(selectedVoiceIdProvider),
+          mood: _mood,
+        );
   }
 
   @override
@@ -42,6 +49,19 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
       spacing: 12,
       children: [
         const VoicePicker(),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final mood in Mood.values)
+              ChoiceChip(
+                avatar: Text(mood.emoji),
+                label: Text(mood.label),
+                selected: mood == _mood,
+                onSelected: (_) => setState(() => _mood = mood),
+              ),
+          ],
+        ),
         SegmentedButton<SpokenLanguage>(
           segments: [
             for (final language in SpokenLanguage.values)

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 class SpeechRemoteDataSource {
@@ -14,6 +15,7 @@ class SpeechRemoteDataSource {
     required String text,
     required SpokenLanguage language,
     String? voiceId,
+    Mood mood = Mood.neutral,
   }) async {
     final response = await _httpClient.post<List<int>>(
       _speechPath,
@@ -21,6 +23,7 @@ class SpeechRemoteDataSource {
         'text': text,
         'language': language.code,
         'voice': ?voiceId,
+        'mood': mood.code,
       },
       options: Options(responseType: ResponseType.bytes),
     );

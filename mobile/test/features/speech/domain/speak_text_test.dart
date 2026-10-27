@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:sado/core/audio/audio_output.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/error/result.dart';
+import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/domain/repositories/speech_repository.dart';
 import 'package:sado/features/speech/domain/usecases/speak_text.dart';
@@ -23,6 +24,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(Uint8List(0));
     registerFallbackValue(SpokenLanguage.english);
+    registerFallbackValue(Mood.neutral);
   });
 
   setUp(() {
@@ -71,5 +73,32 @@ void main() {
       ),
     );
     verifyNever(() => audioOutput.playWav(any()));
+  });
+
+  test('asks for the chosen voice and mood', () async {
+    when(
+      () => repository.synthesize(
+        text: any(named: 'text'),
+        language: any(named: 'language'),
+        voiceId: any(named: 'voiceId'),
+        mood: any(named: 'mood'),
+      ),
+    ).thenAnswer((_) async => Ok(wav));
+
+    await speakText(
+      text: 'salom',
+      language: SpokenLanguage.uzbek,
+      voiceId: 'opa',
+      mood: Mood.happy,
+    );
+
+    verify(
+      () => repository.synthesize(
+        text: 'salom',
+        language: SpokenLanguage.uzbek,
+        voiceId: 'opa',
+        mood: Mood.happy,
+      ),
+    ).called(1);
   });
 }
