@@ -49,6 +49,11 @@ ensure_venv() {
   log "Preparing Python environment at $VENV_DIR"
   uv venv --python 3.12 --allow-existing "$VENV_DIR"
   uv pip install --python "$VENV_DIR/bin/python" omnilingual-asr huggingface_hub
+  # omnilingual-asr leaves torchaudio and pyarrow unpinned: their newest releases need CUDA 13 and
+  # NumPy 2, while fairseq2 pins torch to a CUDA 12.8 build and NumPy to 1.x.
+  local torch_version
+  torch_version=$("$VENV_DIR/bin/python" -c 'import torch; print(torch.__version__.split("+")[0])')
+  uv pip install --python "$VENV_DIR/bin/python" "torchaudio==$torch_version" "pyarrow==20.0.0"
 }
 
 download_mms_tts() {
