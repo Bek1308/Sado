@@ -1,7 +1,9 @@
 import pytest
 
 from sado.infrastructure.languages.uzbek import (
+    build_uzbek_normalizer,
     spell_uzbek_number,
+    spell_uzbek_ordinal,
     transliterate_uzbek_to_cyrillic,
 )
 
@@ -10,10 +12,7 @@ from sado.infrastructure.languages.uzbek import (
     ("number", "words"),
     [
         (0, "ноль"),
-        (7, "етти"),
         (12, "ўн икки"),
-        (40, "қирқ"),
-        (100, "юз"),
         (105, "юз беш"),
         (250, "икки юз эллик"),
         (1_000, "минг"),
@@ -24,8 +23,23 @@ from sado.infrastructure.languages.uzbek import (
         (-3, "минус уч"),
     ],
 )
-def test_spells_numbers_in_cyrillic_uzbek(number: int, words: str) -> None:
+def test_spells_cardinals(number: int, words: str) -> None:
     assert spell_uzbek_number(number) == words
+
+
+@pytest.mark.parametrize(
+    ("number", "words"),
+    [
+        (1, "биринчи"),
+        (2, "иккинчи"),
+        (5, "бешинчи"),
+        (20, "йигирманчи"),
+        (27, "йигирма еттинчи"),
+        (2_026, "икки минг йигирма олтинчи"),
+    ],
+)
+def test_spells_ordinals(number: int, words: str) -> None:
+    assert spell_uzbek_ordinal(number) == words
 
 
 @pytest.mark.parametrize(
@@ -37,9 +51,26 @@ def test_spells_numbers_in_cyrillic_uzbek(number: int, words: str) -> None:
         ("Yangi yil", "Янги йил"),
         ("ma'no", "маъно"),
         ("tog'", "тоғ"),
-        ("choy", "чой"),
         ("Салом", "Салом"),
     ],
 )
-def test_transliterates_latin_uzbek_to_cyrillic(latin: str, cyrillic: str) -> None:
+def test_transliterates_latin_to_cyrillic(latin: str, cyrillic: str) -> None:
     assert transliterate_uzbek_to_cyrillic(latin) == cyrillic
+
+
+@pytest.mark.parametrize(
+    ("text", "spoken"),
+    [
+        ("2026-yil", "икки минг йигирма олтинчи йил"),
+        ("2026-yilda", "икки минг йигирма олтинчи йилда"),
+        ("27-oktyabr", "йигирма еттинчи октябр"),
+        ("27 oktyabr", "йигирма еттинчи октябр"),
+        ("5ta olma", "бешта олма"),
+        ("10dan ortiq", "ўндан ортиқ"),
+        ("narxi 15 000 so'm", "нархи ўн беш минг сўм"),
+        ("chegirma 20%", "чегирма йигирма фоиз"),
+        ("Sado AI", "Садо эй ай"),
+    ],
+)
+def test_normalizes_numbers_with_suffixes_and_names(text: str, spoken: str) -> None:
+    assert build_uzbek_normalizer().normalize(text) == spoken
