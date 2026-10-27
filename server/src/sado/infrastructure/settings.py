@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     speech_device: str = "cpu"
     voice_speaking_rate: float = 1.0
     voice_pitch_variation: float = 0.5
-    voice_rhythm_variation: float = 0.2
+    voice_rhythm_variation: float = 0.0
 
 
 @lru_cache

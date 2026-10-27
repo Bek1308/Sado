@@ -22,7 +22,7 @@ class VitsVoiceSettings:
 
     speaking_rate: float = 1.0
     pitch_variation: float = 0.5
-    rhythm_variation: float = 0.2
+    rhythm_variation: float = 0.0
     seed: int = 0
 
 
