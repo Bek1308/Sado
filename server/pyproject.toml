@@ -6,8 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "num2words>=0.5.14",
     "pydantic-settings>=2.6",
     "uvicorn[standard]>=0.32",
+]
+
+[project.optional-dependencies]
+speech = [
+    "torch>=2.14.1",
+    "transformers>=5.21.0",
 ]
 
 [dependency-groups]
@@ -44,6 +51,8 @@ select = [
     "PL",       # pylint
     "ANN",      # type annotations
 ]
+# Sado works with Cyrillic text and Uzbek apostrophes by design; they are not typos.
+ignore = ["RUF001", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["PLR2004"]
@@ -54,9 +63,13 @@ python_version = "3.12"
 mypy_path = "src"
 packages = ["sado"]
 
+[[tool.mypy.overrides]]
+module = ["num2words", "torch", "transformers"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 filterwarnings = [
     # Starlette's TestClient nudges towards an `httpx2` package we have not vetted yet.
     "ignore:Using `httpx` with `starlette.testclient` is deprecated",

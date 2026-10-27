@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "Sado"
     version: str = "0.1.0"
     environment: str = "development"
+    speech_device: str = "cpu"
 
 
 @lru_cache
