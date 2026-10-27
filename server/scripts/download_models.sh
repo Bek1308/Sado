@@ -29,6 +29,14 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*"; }
 
+ensure_system_libraries() {
+  # fairseq2 loads audio through the system libsndfile library.
+  if ! ldconfig -p | grep -q libsndfile.so.1; then
+    log "Installing libsndfile1"
+    apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libsndfile1
+  fi
+}
+
 ensure_uv() {
   if ! command -v uv >/dev/null; then
     log "Installing uv"
@@ -74,6 +82,7 @@ PY
 }
 
 log "=== Sado model download started ==="
+ensure_system_libraries
 ensure_uv
 ensure_venv
 download_mms_tts
