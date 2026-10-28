@@ -26,6 +26,7 @@ class ReplyRequest(BaseModel):
 
 class ReplyResponse(BaseModel):
     reply: str
+    remembered: list[str]
 
 
 @router.post("")
@@ -34,4 +35,5 @@ def reply(
     converse: Annotated[Converse, Depends(get_converse)],
 ) -> ReplyResponse:
     conversation = [Message(message.speaker, message.text) for message in request.messages]
-    return ReplyResponse(reply=converse.execute(conversation, request.language))
+    answer = converse.execute(conversation, request.language)
+    return ReplyResponse(reply=answer.text, remembered=list(answer.remembered))

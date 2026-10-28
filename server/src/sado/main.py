@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import cast
 
+import httpx
 from fastapi import FastAPI
 
 from sado.application.converse import Converse
@@ -18,6 +19,7 @@ from sado.domain.memory import MemoryStore
 from sado.domain.speech import LanguagePack
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
+from sado.infrastructure.reasoning.muse_spark import MuseSparkReasoner
 from sado.infrastructure.reasoning.unavailable import UnavailableReasoner
 from sado.infrastructure.settings import Settings, get_settings
 from sado.infrastructure.tts.mms import VitsVoiceSettings
@@ -61,8 +63,20 @@ def _voice_config(settings: Settings) -> VoiceConfig:
     )
 
 
-def _default_reasoning_model() -> ReasoningModel:
-    # A developer may keep a private reasoner module outside version control for local testing.
+def _default_reasoning_model(settings: Settings) -> ReasoningModel:
+    api_key = settings.meta_api_key.get_secret_value() if settings.meta_api_key else ""
+    # A blank key, as copied from .env.example, means "not configured" rather than a bad key.
+    if api_key.strip():
+        return MuseSparkReasoner(
+            http=httpx.Client(
+                base_url=settings.meta_api_url,
+                headers={"Authorization": f"Bearer {api_key.strip()}"},
+                timeout=settings.reasoning_timeout_seconds,
+            ),
+            model=settings.reasoning_model,
+            reasoning_effort=settings.reasoning_effort,
+        )
+    # Without a key, a developer may keep a private reasoner module outside version control.
     try:
         local = importlib.import_module("sado.infrastructure.reasoning.local_dev")
     except ModuleNotFoundError:
@@ -86,7 +100,7 @@ def create_app(
     app.state.transcribe_speech = TranscribeSpeech(packs)
     saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))
     app.state.memories = saved
-    app.state.converse = Converse(reasoning_model or _default_reasoning_model(), saved)
+    app.state.converse = Converse(reasoning_model or _default_reasoning_model(settings), saved)
 
     register_error_handlers(app)
     app.include_router(health.router)

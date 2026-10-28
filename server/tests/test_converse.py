@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sado.application.converse import Converse
-from sado.domain.conversation import Message, Speaker
+from sado.domain.conversation import Answer, Message, ModelTurn, Speaker, ToolSpec, ToolStep
 from sado.domain.errors import NothingToAnswerError
 from sado.domain.language import Language
 from sado.main import create_app
@@ -15,9 +15,15 @@ class _ParrotModel:
     def __init__(self) -> None:
         self.instructions: list[str] = []
 
-    def reply(self, instructions: str, conversation: Sequence[Message]) -> str:
+    def respond(
+        self,
+        instructions: str,
+        conversation: Sequence[Message],
+        tools: Sequence[ToolSpec],
+        steps: Sequence[ToolStep],
+    ) -> ModelTurn:
         self.instructions.append(instructions)
-        return f"  You said: {conversation[-1].text}  "
+        return Answer(f"  You said: {conversation[-1].text}  ")
 
 
 def test_answers_the_last_user_message_in_the_requested_language() -> None:
@@ -25,7 +31,7 @@ def test_answers_the_last_user_message_in_the_requested_language() -> None:
 
     reply = Converse(model).execute([Message(Speaker.USER, "salom")], Language.UZBEK)
 
-    assert reply == "You said: salom"
+    assert reply.text == "You said: salom"
     assert "Uzbek, written in the Latin alphabet" in model.instructions[0]
 
 
@@ -58,4 +64,4 @@ def test_replies_endpoint_returns_sado_answer() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {"reply": "You said: салом"}
+    assert response.json() == {"reply": "You said: салом", "remembered": []}

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from sado.application.converse import Converse
 from sado.application.memories import Memories
-from sado.domain.conversation import Message, Speaker
+from sado.domain.conversation import Answer, Message, ModelTurn, Speaker, ToolSpec, ToolStep
 from sado.domain.errors import EmptyMemoryError, UnknownMemoryError
 from sado.domain.language import Language
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
@@ -21,9 +21,15 @@ class _ListeningModel:
     def __init__(self) -> None:
         self.instructions = ""
 
-    def reply(self, instructions: str, conversation: Sequence[Message]) -> str:
+    def respond(
+        self,
+        instructions: str,
+        conversation: Sequence[Message],
+        tools: Sequence[ToolSpec],
+        steps: Sequence[ToolStep],
+    ) -> ModelTurn:
         self.instructions = instructions
-        return "OK"
+        return Answer("OK")
 
 
 def test_store_lists_newest_first_and_forgets() -> None:
