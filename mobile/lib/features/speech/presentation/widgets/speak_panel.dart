@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
+import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/listening/presentation/widgets/mic_button.dart';
 import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
@@ -30,19 +31,34 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
   Future<void> _speak() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
-    await ref
-        .read(speakControllerProvider.notifier)
-        .speak(
-          text,
-          _language,
-          voiceId: ref.read(selectedVoiceIdProvider),
-          mood: _mood,
-        );
+    await _say(text);
   }
+
+  Future<void> _ask() async {
+    final question = _textController.text.trim();
+    if (question.isEmpty) return;
+    _textController.clear();
+    final reply = await ref
+        .read(conversationControllerProvider.notifier)
+        .ask(question, _language);
+    if (reply != null && mounted) await _say(reply);
+  }
+
+  Future<void> _say(String text) => ref
+      .read(speakControllerProvider.notifier)
+      .speak(
+        text,
+        _language,
+        voiceId: ref.read(selectedVoiceIdProvider),
+        mood: _mood,
+      );
 
   @override
   Widget build(BuildContext context) {
     final speaking = ref.watch(speakControllerProvider);
+    final busy =
+        speaking.isLoading ||
+        ref.watch(conversationControllerProvider).isThinking;
     final error = speaking.error;
 
     return Column(
@@ -96,15 +112,29 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
           ],
         ),
         ExpressionCueBar(controller: _textController),
-        FilledButton.icon(
-          onPressed: speaking.isLoading ? null : _speak,
-          icon: speaking.isLoading
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.record_voice_over),
-          label: const Text('Speak'),
+        Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: busy ? null : _speak,
+                icon: speaking.isLoading
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.record_voice_over),
+                label: const Text('Speak it'),
+              ),
+            ),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: busy ? null : _ask,
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Ask Sado'),
+              ),
+            ),
+          ],
         ),
         if (error != null)
           Text(

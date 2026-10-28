@@ -5,6 +5,7 @@ abstract final class AppConfig {
     defaultValue: 'http://10.0.2.2:8000',
   );
 
-  static const connectTimeout = Duration(seconds: 5);
-  static const receiveTimeout = Duration(seconds: 30);
+  static const connectTimeout = Duration(seconds: 10);
+  // Thinking and speaking a long answer on a local GPU can take a while.
+  static const receiveTimeout = Duration(seconds: 120);
 }

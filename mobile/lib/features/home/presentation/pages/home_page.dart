@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sado/features/conversation/presentation/widgets/conversation_view.dart';
 import 'package:sado/features/server_status/presentation/widgets/server_status_badge.dart';
 import 'package:sado/features/speech/presentation/widgets/speak_panel.dart';
 
@@ -46,6 +47,7 @@ class HomePage extends StatelessWidget {
                     style: theme.textTheme.titleMedium,
                   ),
                   const ServerStatusBadge(),
+                  const ConversationView(),
                   const SpeakPanel(),
                 ],
               ),
