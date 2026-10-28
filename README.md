@@ -140,7 +140,7 @@ Sado is being built live during the hackathon. All code in this repository was w
 
 - [x] Foundations: server and mobile skeletons, Clean Architecture, CI
 - [ ] Flutter app: voice button, camera, Sado's face
-- [ ] Hear: speech-to-text router (Muse Voice Transcribe + Omnilingual ASR)
+- [x] Hear: speech-to-text with Meta Omnilingual ASR (LLM 1B) for Tajik, Uzbek, Russian, English
 - [ ] Think: Muse Spark agent loop with tools
 - [ ] Remember: memory store with search and analysis
 - [ ] Speak: TTS with speech-ready text normalisation

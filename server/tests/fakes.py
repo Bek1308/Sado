@@ -4,6 +4,7 @@ from sado.application.voices import VoiceCatalog
 from sado.domain.audio import Audio
 from sado.domain.language import Language
 from sado.domain.mood import Mood
+from sado.domain.recording import Recording, Transcript
 from sado.domain.speech import LanguagePack
 from sado.domain.voice import Voice
 
@@ -32,6 +33,17 @@ class RecordingSynthesizer:
         return Audio(wav_bytes=f"wav:{voice.id}:{text}".encode())
 
 
+@dataclass
+class EchoRecognizer:
+    """Pretends the recording's bytes are the words that were spoken."""
+
+    heard: list[Recording] = field(default_factory=list)
+
+    def transcribe(self, recording: Recording) -> Transcript:
+        self.heard.append(recording)
+        return Transcript(text=recording.data.decode())
+
+
 def fake_language_pack(language: Language) -> tuple[LanguagePack, RecordingSynthesizer]:
     synthesizer = RecordingSynthesizer()
-    return LanguagePack(language, UppercaseNormalizer(), synthesizer), synthesizer
+    return LanguagePack(language, UppercaseNormalizer(), synthesizer, EchoRecognizer()), synthesizer

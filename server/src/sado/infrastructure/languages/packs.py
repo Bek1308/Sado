@@ -2,8 +2,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
+
 from sado.domain.language import Language
 from sado.domain.speech import LanguagePack, SpeechSynthesizer, TextNormalizer
+from sado.infrastructure.asr.omnilingual import OmnilingualRecognizer
 from sado.infrastructure.languages.english import build_english_normalizer
 from sado.infrastructure.languages.russian import build_russian_normalizer
 from sado.infrastructure.languages.tajik import build_tajik_normalizer
@@ -28,6 +31,14 @@ _NORMALIZERS: dict[Language, TextNormalizer] = {
     Language.ENGLISH: build_english_normalizer(),
 }
 
+# Uzbek uses the "uzb" code: it reads numbers far better than "uzn" in our tests.
+_OMNILINGUAL_CODES = {
+    Language.TAJIK: "tgk_Cyrl",
+    Language.UZBEK: "uzb_Latn",
+    Language.RUSSIAN: "rus_Cyrl",
+    Language.ENGLISH: "eng_Latn",
+}
+
 _MMS_MODEL_IDS = {
     Language.TAJIK: "facebook/mms-tts-tgk",
     Language.UZBEK: "facebook/mms-tts-uzb-script_cyrillic",
@@ -46,6 +57,8 @@ class VoiceConfig:
     clone_quality: CloneQuality
     mms_device: str
     mms_voice: VitsVoiceSettings
+    asr_url: str
+    asr_timeout_seconds: float
 
 
 def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
@@ -54,11 +67,13 @@ def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
         if config.use_omnivoice
         else None
     )
+    asr_http = httpx.Client(base_url=config.asr_url, timeout=config.asr_timeout_seconds)
     return {
         language: LanguagePack(
             language=language,
             normalizer=_NORMALIZERS[language],
             synthesizer=_build_synthesizer(language, config, omnivoice),
+            recognizer=OmnilingualRecognizer(asr_http, _OMNILINGUAL_CODES[language]),
         )
         for language in Language
     }

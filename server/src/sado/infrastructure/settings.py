@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0
 
+    asr_url: str = "http://localhost:8011"
+    asr_timeout_seconds: float = 60.0
+
     mms_device: str = "cpu"
     voice_speaking_rate: float = 1.0
     voice_pitch_variation: float = 0.5

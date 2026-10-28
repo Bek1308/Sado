@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 
 from sado.application.speak_text import SpeakText
+from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.language import Language
 from sado.domain.speech import LanguagePack
@@ -15,7 +16,7 @@ from sado.infrastructure.tts.mms import VitsVoiceSettings
 from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
 from sado.presentation.error_handlers import register_error_handlers
-from sado.presentation.routers import health, speech, voices
+from sado.presentation.routers import health, speech, transcriptions, voices
 
 
 def _voice_catalog(default_voice_id: str) -> VoiceCatalog:
@@ -40,6 +41,8 @@ def _voice_config(settings: Settings) -> VoiceConfig:
             pitch_variation=settings.voice_pitch_variation,
             rhythm_variation=settings.voice_rhythm_variation,
         ),
+        asr_url=settings.asr_url,
+        asr_timeout_seconds=settings.asr_timeout_seconds,
     )
 
 
@@ -54,10 +57,12 @@ def create_app(
     packs = language_packs or build_language_packs(_voice_config(settings))
     app.state.voice_catalog = catalog
     app.state.speak_text = SpeakText(packs, catalog)
+    app.state.transcribe_speech = TranscribeSpeech(packs)
 
     register_error_handlers(app)
     app.include_router(health.router)
     app.include_router(speech.router)
+    app.include_router(transcriptions.router)
     app.include_router(voices.router)
     return app
 

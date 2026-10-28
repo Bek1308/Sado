@@ -20,3 +20,15 @@ class UnknownVoiceError(SadoError):
     def __init__(self, voice_id: str) -> None:
         super().__init__(f"There is no voice called '{voice_id}'")
         self.voice_id = voice_id
+
+
+class EmptyRecordingError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("The recording contains no audio")
+
+
+class SpeechRecognitionUnavailableError(SadoError):
+    """The speech recognition service could not be reached or failed."""
+
+    def __init__(self) -> None:
+        super().__init__("Speech recognition is temporarily unavailable")

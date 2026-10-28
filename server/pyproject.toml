@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "fastapi>=0.115",
+    "httpx>=0.28.1",
     "num2words>=0.5.14",
     "pydantic-settings>=2.6",
+    "python-multipart>=0.0.32",
     "uvicorn[standard]>=0.32",
 ]
 
@@ -21,7 +23,6 @@ speech = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28",
     "mypy>=1.13",
     "pytest>=8.3",
     "ruff>=0.8",
