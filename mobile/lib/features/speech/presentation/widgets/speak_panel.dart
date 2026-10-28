@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
+import 'package:sado/features/listening/presentation/widgets/mic_button.dart';
 import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
@@ -72,16 +73,27 @@ class _SpeakPanelState extends ConsumerState<SpeakPanel> {
           onSelectionChanged: (selection) =>
               setState(() => _language = selection.single),
         ),
-        TextField(
-          controller: _textController,
-          minLines: 1,
-          maxLines: 4,
-          textInputAction: TextInputAction.send,
-          onSubmitted: (_) => _speak(),
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Type something for Sado to say',
-          ),
+        Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _speak(),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Type, or tap the mic and talk',
+                ),
+              ),
+            ),
+            MicButton(
+              language: _language,
+              onHeard: (text) => _textController.text = text,
+            ),
+          ],
         ),
         ExpressionCueBar(controller: _textController),
         FilledButton.icon(
