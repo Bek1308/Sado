@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -21,7 +22,11 @@ class ReminderStore(Protocol):
         ...
 
     def due_before(self, moment: datetime, limit: int) -> list[Reminder]:
-        """Reminders due at or before `moment`, soonest first."""
+        """Undelivered reminders due at or before `moment`, soonest first."""
+        ...
+
+    def mark_delivered(self, reminder_ids: Sequence[str], moment: datetime) -> None:
+        """Sado has told the user about these, so they stop coming back."""
         ...
 
     def delete(self, reminder_id: str) -> bool:

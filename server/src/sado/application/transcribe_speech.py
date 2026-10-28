@@ -41,6 +41,11 @@ class TranscribeSpeech:
         heard: list[tuple[Transcript, Language | None]] = []
         for language in candidates:
             transcript = self._language_packs[language].recognizer.transcribe(recording)
+            # Silence or a single word carries no language signal; more passes would only
+            # cost time and hear the same nothing.
+            if len(transcript.text.split()) <= 1:
+                self._last_detected = language
+                return transcript, language
             detected = detect_language(transcript.text)
             if detected is language:
                 self._last_detected = language

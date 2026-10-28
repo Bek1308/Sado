@@ -1,7 +1,10 @@
 """Composition root: the only place where layers are wired together."""
 
 import importlib
-from collections.abc import Mapping
+import logging
+import threading
+from collections.abc import AsyncIterator, Mapping, Sequence
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
 
@@ -16,6 +19,7 @@ from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
+from sado.domain.errors import SadoError
 from sado.domain.language import Language
 from sado.domain.memory import MemoryStore
 from sado.domain.reminder import ReminderStore
@@ -93,6 +97,26 @@ def _default_reasoning_model(settings: Settings) -> ReasoningModel:
 
 
 # One seam per layer keeps router tests hermetic without real models.
+logger = logging.getLogger(__name__)
+
+_WARM_UP_TEXT = {
+    Language.UZBEK: "Salom.",
+    Language.TAJIK: "Салом.",
+    Language.RUSSIAN: "Привет.",
+    Language.ENGLISH: "Hello.",
+}
+
+
+def _warm_up_voices(speak_text: SpeakText, languages: Sequence[Language]) -> None:
+    # Voice models load on first use; without this the first spoken reply of a demo
+    # waits for every model to load.
+    for language in languages:
+        try:
+            speak_text.execute(_WARM_UP_TEXT[language], language)
+        except SadoError:
+            logger.warning("Could not warm up the %s voice", language)
+
+
 def create_app(  # noqa: PLR0913
     *,
     language_packs: Mapping[Language, LanguagePack] | None = None,
@@ -103,12 +127,21 @@ def create_app(  # noqa: PLR0913
     reminder_store: ReminderStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version=settings.version)
-
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
     packs = language_packs or build_language_packs(_voice_config(settings))
+    speak_text = SpeakText(packs, catalog)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        if settings.warm_up_voices:
+            threading.Thread(
+                target=_warm_up_voices, args=(speak_text, list(packs)), daemon=True
+            ).start()
+        yield
+
+    app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
     app.state.voice_catalog = catalog
-    app.state.speak_text = SpeakText(packs, catalog)
+    app.state.speak_text = speak_text
     transcribe_speech = TranscribeSpeech(packs)
     app.state.transcribe_speech = transcribe_speech
     saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))

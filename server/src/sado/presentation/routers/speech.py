@@ -11,7 +11,7 @@ from sado.presentation.dependencies import get_speak_text
 
 router = APIRouter(prefix="/speech", tags=["speech"])
 
-_MAX_TEXT_LENGTH = 1_000
+_MAX_TEXT_LENGTH = 3_000
 
 
 class SpeakRequest(BaseModel):

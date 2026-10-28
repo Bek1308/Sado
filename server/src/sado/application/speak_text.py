@@ -1,11 +1,20 @@
+import logging
 from collections.abc import Mapping
 
 from sado.application.voices import VoiceCatalog
 from sado.domain.audio import Audio
-from sado.domain.errors import EmptyTextError, UnsupportedLanguageError
+from sado.domain.errors import (
+    EmptyTextError,
+    SadoError,
+    SpeechSynthesisUnavailableError,
+    UnsupportedLanguageError,
+)
+from sado.domain.expression import remove_expression_cues
 from sado.domain.language import Language
 from sado.domain.mood import Mood
 from sado.domain.speech import LanguagePack
+
+logger = logging.getLogger(__name__)
 
 
 class SpeakText:
@@ -30,6 +39,17 @@ class SpeakText:
         if pack is None:
             raise UnsupportedLanguageError(language)
 
+        # A reply made only of cues, e.g. "[laugh]", has nothing left for a voice to say.
+        if not remove_expression_cues(stripped_text).strip():
+            raise EmptyTextError
         voice = self._voices.find(voice_id)
         spoken_text = pack.normalizer.normalize(stripped_text)
-        return pack.synthesizer.synthesize(spoken_text, voice, mood)
+        try:
+            return pack.synthesizer.synthesize(spoken_text, voice, mood)
+        except SadoError:
+            raise
+        except Exception as error:
+            # Voice engines fail in many ways (model download, GPU memory); callers only
+            # need to know Sado cannot speak right now.
+            logger.exception("Every voice engine failed")
+            raise SpeechSynthesisUnavailableError from error

@@ -23,7 +23,8 @@ def explain_instructions(language: Language, kind: PaperKind) -> str:
     return (
         f"{persona_instructions(language)}\n\n"
         f"{subject} Read it and explain in plain words what it is, "
-        "its key names, dates and amounts, and what to do next."
+        "its key names, dates and amounts, and what to do next, "
+        "in at most five short spoken sentences."
     )
 
 

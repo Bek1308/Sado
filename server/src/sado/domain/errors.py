@@ -91,3 +91,17 @@ class UnknownReminderError(SadoError):
     def __init__(self, reminder_id: str) -> None:
         super().__init__(f"No reminder with id '{reminder_id}'")
         self.reminder_id = reminder_id
+
+
+class UnreadableRecordingError(SadoError):
+    """The recording reached speech recognition but could not be understood as audio."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"Sado could not hear that recording: {reason}")
+
+
+class SpeechSynthesisUnavailableError(SadoError):
+    """No voice engine could speak the text."""
+
+    def __init__(self) -> None:
+        super().__init__("Sado cannot speak right now; please try again")

@@ -3,6 +3,7 @@
 import sqlite3
 import threading
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,8 +23,13 @@ class SqliteReminderStore:
         with self._lock, self._connection:
             self._connection.execute(
                 "CREATE TABLE IF NOT EXISTS reminders "
-                "(id TEXT PRIMARY KEY, text TEXT, due_at TEXT, created_at TEXT)"
+                "(id TEXT PRIMARY KEY, text TEXT, due_at TEXT, created_at TEXT, "
+                "delivered_at TEXT)"
             )
+            columns = {row[1] for row in self._connection.execute("PRAGMA table_info(reminders)")}
+            # Stores created before delivery tracking existed gain the column in place.
+            if "delivered_at" not in columns:
+                self._connection.execute("ALTER TABLE reminders ADD COLUMN delivered_at TEXT")
 
     def add(self, text: str, due_at: datetime) -> Reminder:
         reminder = Reminder(
@@ -49,11 +55,20 @@ class SqliteReminderStore:
         )
 
     def due_before(self, moment: datetime, limit: int) -> list[Reminder]:
+        # Times are stored as UTC text, so the bound must be UTC text too to compare in order.
         return self._select(
-            "SELECT id, text, due_at, created_at FROM reminders WHERE due_at <= ? "
+            "SELECT id, text, due_at, created_at FROM reminders "
+            "WHERE delivered_at IS NULL AND due_at <= ? "
             "ORDER BY due_at ASC, rowid ASC LIMIT ?",
-            (moment.isoformat(), limit),
+            (moment.astimezone(UTC).isoformat(), limit),
         )
+
+    def mark_delivered(self, reminder_ids: Sequence[str], moment: datetime) -> None:
+        with self._lock, self._connection:
+            self._connection.executemany(
+                "UPDATE reminders SET delivered_at = ? WHERE id = ?",
+                [(moment.astimezone(UTC).isoformat(), reminder_id) for reminder_id in reminder_ids],
+            )
 
     def delete(self, reminder_id: str) -> bool:
         with self._lock, self._connection:

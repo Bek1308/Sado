@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from sado.domain.errors import SpeechRecognitionUnavailableError
+from sado.domain.errors import SpeechRecognitionUnavailableError, UnreadableRecordingError
 from sado.domain.recording import Recording, Transcript
 
 
@@ -26,7 +26,22 @@ class OmnilingualRecognizer:
                 files={"audio": ("recording", recording.data, recording.media_type)},
                 data={"language": self.language_code},
             )
-            response.raise_for_status()
         except httpx.HTTPError as error:
             raise SpeechRecognitionUnavailableError from error
-        return Transcript(text=str(response.json()["text"]))
+        # The worker answers 4xx for audio it cannot decode or that runs too long: the
+        # recording is at fault, not the service.
+        if response.is_client_error:
+            raise UnreadableRecordingError(_detail(response))
+        try:
+            response.raise_for_status()
+            return Transcript(text=str(response.json()["text"]))
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as error:
+            raise SpeechRecognitionUnavailableError from error
+
+
+def _detail(response: httpx.Response) -> str:
+    try:
+        detail = response.json().get("detail")
+    except (ValueError, AttributeError):
+        detail = None
+    return detail if isinstance(detail, str) else f"rejected with status {response.status_code}"

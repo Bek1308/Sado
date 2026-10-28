@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     omnivoice_device: str = "cuda"
     omnivoice_uzbek_code: str = "uz"
     default_voice: str = "sado"
+    warm_up_voices: bool = True
     mood_reference_dir: str = "data/voices"
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0
@@ -25,10 +26,12 @@ class Settings(BaseSettings):
     meta_api_url: str = "https://api.meta.ai/v1"
     reasoning_model: str = "muse-spark-1.3"
     reasoning_effort: str = "low"
-    reasoning_timeout_seconds: float = 60.0
+    # Up to four model calls per reply must fit inside the app's 120-second wait.
+    reasoning_timeout_seconds: float = 25.0
 
     asr_url: str = "http://localhost:8011"
-    asr_timeout_seconds: float = 60.0
+    # Language detection may transcribe the same clip up to four times.
+    asr_timeout_seconds: float = 20.0
 
     mms_device: str = "cpu"
     voice_speaking_rate: float = 1.0

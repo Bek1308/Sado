@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from sado.application.converse import Converse
 from sado.domain.conversation import Message, Speaker
@@ -13,13 +13,21 @@ from sado.presentation.dependencies import get_converse
 router = APIRouter(prefix="/replies", tags=["conversation"])
 
 _MAX_MESSAGES = 30
-_MAX_MESSAGE_LENGTH = 2_000
+_MAX_USER_MESSAGE_LENGTH = 2_000
+# Sado's own turns can be long document explanations; they are context, not new input.
+_MAX_HISTORY_MESSAGE_LENGTH = 20_000
 _MAX_UTC_OFFSET_MINUTES = 14 * 60
 
 
 class MessageModel(BaseModel):
     speaker: Speaker
-    text: str = Field(max_length=_MAX_MESSAGE_LENGTH)
+    text: str = Field(max_length=_MAX_HISTORY_MESSAGE_LENGTH)
+
+    @model_validator(mode="after")
+    def _limit_user_text(self) -> "MessageModel":
+        if self.speaker is Speaker.USER and len(self.text) > _MAX_USER_MESSAGE_LENGTH:
+            raise ValueError(f"A message can be at most {_MAX_USER_MESSAGE_LENGTH} characters")
+        return self
 
 
 class ReplyRequest(BaseModel):

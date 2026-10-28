@@ -37,6 +37,10 @@ class Reminders:
     def due(self, now: datetime) -> list[Reminder]:
         return self._store.due_before(now, self._DUE_LIMIT)
 
+    def delivered(self, reminders: list[Reminder], now: datetime) -> None:
+        if reminders:
+            self._store.mark_delivered([reminder.id for reminder in reminders], now)
+
     def forget(self, reminder_id: str) -> None:
         if not self._store.delete(reminder_id):
             raise UnknownReminderError(reminder_id)

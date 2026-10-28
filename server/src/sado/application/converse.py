@@ -74,6 +74,14 @@ def reminder_label(reminder: Reminder, zone: tzinfo = UTC) -> str:
     return f"{reminder.text} ({reminder.due_at.astimezone(zone):%d %b, %H:%M})"
 
 
+_DONE = {
+    Language.UZBEK: "Bo'ldi.",
+    Language.TAJIK: "Шуд.",
+    Language.RUSSIAN: "Готово.",
+    Language.ENGLISH: "Done.",
+}
+
+
 @dataclass(frozen=True, slots=True)
 class Reply:
     text: str
@@ -129,11 +137,10 @@ class Converse:
         for _ in range(self._MAX_TOOL_STEPS + 1):
             turn = self._reasoning_model.respond(instructions, conversation, tools, steps)
             if isinstance(turn, Answer):
-                return Reply(
-                    text=turn.text.strip(),
-                    remembered=tuple(remembered),
-                    reminded=tuple(reminded),
-                )
+                text = turn.text.strip() or self._fallback_text(language, remembered, reminded)
+                if self._reminders is not None:
+                    self._reminders.delivered(due, moment)
+                return Reply(text=text, remembered=tuple(remembered), reminded=tuple(reminded))
             steps.append(
                 ToolStep(
                     results=tuple(
@@ -141,6 +148,13 @@ class Converse:
                     )
                 )
             )
+        raise ReasoningUnavailableError
+
+    @staticmethod
+    def _fallback_text(language: Language, remembered: list[str], reminded: list[str]) -> str:
+        # Models often go quiet right after a tool call; a short confirmation beats silence.
+        if remembered or reminded:
+            return _DONE[language]
         raise ReasoningUnavailableError
 
     def _run(
