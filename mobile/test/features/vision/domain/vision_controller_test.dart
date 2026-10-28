@@ -53,12 +53,12 @@ ProviderContainer _container(
 }
 
 void main() {
-  test('explains the photographed paper in the chosen language', () async {
+  test('explains the photographed paper in the current language', () async {
     final repository = _FakeRepository(const Ok('This is a notice.'));
     final container = _container(_FakePicker(), repository);
     final controller = container.read(visionControllerProvider.notifier);
 
-    await controller.explain(SpokenLanguage.tajik);
+    await controller.explain();
 
     expect(
       container.read(visionControllerProvider),
@@ -68,7 +68,7 @@ void main() {
         'This is a notice.',
       ),
     );
-    expect(repository.askedLanguage, SpokenLanguage.tajik);
+    expect(repository.askedLanguage, SpokenLanguage.uzbek);
   });
 
   test('stays idle when the user cancels the camera', () async {
@@ -77,9 +77,7 @@ void main() {
       _FakeRepository(const Ok('')),
     );
 
-    await container
-        .read(visionControllerProvider.notifier)
-        .explain(SpokenLanguage.uzbek);
+    await container.read(visionControllerProvider.notifier).explain();
 
     expect(container.read(visionControllerProvider), isA<VisionIdle>());
   });
@@ -90,9 +88,7 @@ void main() {
       _FakeRepository(const Ok('')),
     );
 
-    await container
-        .read(visionControllerProvider.notifier)
-        .explain(SpokenLanguage.uzbek);
+    await container.read(visionControllerProvider.notifier).explain();
 
     expect(container.read(visionControllerProvider), isA<VisionFailed>());
   });
@@ -105,9 +101,7 @@ void main() {
       ),
     );
 
-    await container
-        .read(visionControllerProvider.notifier)
-        .explain(SpokenLanguage.uzbek);
+    await container.read(visionControllerProvider.notifier).explain();
 
     expect(
       container.read(visionControllerProvider),

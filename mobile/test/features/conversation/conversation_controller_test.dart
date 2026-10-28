@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/error/result.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/domain/repositories/conversation_repository.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
@@ -17,13 +18,16 @@ final class _FakeRepository implements ConversationRepository {
 
   final Result<SadoReply> result;
   final sent = <List<ChatMessage>>[];
+  final modes = <SadoMode>[];
 
   @override
   Future<Result<SadoReply>> reply(
     List<ChatMessage> conversation,
     SpokenLanguage language,
+    SadoMode mode,
   ) async {
     sent.add(conversation);
+    modes.add(mode);
     return result;
   }
 }
@@ -43,7 +47,7 @@ void main() {
 
     final reply = await container
         .read(conversationControllerProvider.notifier)
-        .ask('salom', SpokenLanguage.uzbek);
+        .ask('salom', SpokenLanguage.uzbek, SadoMode.personal);
 
     expect(reply?.text, 'Salom!');
     final messages = container.read(conversationControllerProvider).messages;
@@ -62,8 +66,12 @@ void main() {
       repository,
     ).read(conversationControllerProvider.notifier);
 
-    await controller.ask('birinchi', SpokenLanguage.uzbek);
-    await controller.ask('ikkinchi', SpokenLanguage.uzbek);
+    await controller.ask(
+      'birinchi',
+      SpokenLanguage.uzbek,
+      SadoMode.personal,
+    );
+    await controller.ask('ikkinchi', SpokenLanguage.uzbek, SadoMode.personal);
 
     expect(repository.sent.last.map((m) => m.text), [
       'birinchi',
@@ -98,7 +106,7 @@ void main() {
 
     final reply = await container
         .read(conversationControllerProvider.notifier)
-        .ask('salom', SpokenLanguage.uzbek);
+        .ask('salom', SpokenLanguage.uzbek, SadoMode.personal);
 
     expect(reply, isNull);
     expect(
@@ -130,10 +138,21 @@ void main() {
 
     final reply = await container
         .read(conversationControllerProvider.notifier)
-        .ask('Ismim Aziz, eslab qol', SpokenLanguage.uzbek);
+        .ask('Ismim Aziz, eslab qol', SpokenLanguage.uzbek, SadoMode.personal);
 
     expect(reply?.remembered, ['Ismi Aziz']);
     final refreshed = await container.read(memoriesControllerProvider.future);
     expect(refreshed.map((memory) => memory.text), ['Ismi Aziz']);
+  });
+
+  test('asks in the selected mode', () async {
+    final repository = _FakeRepository(const Ok(SadoReply(text: 'Hi')));
+    final container = _container(repository);
+
+    await container
+        .read(conversationControllerProvider.notifier)
+        .ask('salom', SpokenLanguage.uzbek, SadoMode.work);
+
+    expect(repository.modes, [SadoMode.work]);
   });
 }

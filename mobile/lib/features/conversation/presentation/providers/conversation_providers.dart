@@ -4,6 +4,7 @@ import 'package:sado/core/network/http_client.dart';
 import 'package:sado/features/conversation/data/datasources/conversation_remote_data_source.dart';
 import 'package:sado/features/conversation/data/repositories/conversation_repository_impl.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/domain/repositories/conversation_repository.dart';
 import 'package:sado/features/conversation/domain/usecases/ask_sado.dart';
@@ -46,7 +47,11 @@ class ConversationController extends Notifier<ConversationState> {
 
   /// Sends [text] to Sado and returns the reply, or `null` when Sado could
   /// not answer.
-  Future<SadoReply?> ask(String text, SpokenLanguage language) async {
+  Future<SadoReply?> ask(
+    String text,
+    SpokenLanguage language,
+    SadoMode mode,
+  ) async {
     final messages = [
       ...state.messages,
       ChatMessage(speaker: ChatSpeaker.user, text: text),
@@ -56,7 +61,9 @@ class ConversationController extends Notifier<ConversationState> {
     final context = messages.length > _contextSize
         ? messages.sublist(messages.length - _contextSize)
         : messages;
-    final result = await ref.read(askSadoProvider).call(context, language);
+    final result = await ref
+        .read(askSadoProvider)
+        .call(context, language, mode);
 
     switch (result) {
       case Ok(:final value):

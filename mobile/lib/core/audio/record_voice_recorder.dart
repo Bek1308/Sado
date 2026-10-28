@@ -19,8 +19,14 @@ final class RecordVoiceRecorder implements VoiceRecorder {
     numChannels: 1,
   );
   static const _mimeType = 'audio/mp4';
+  static const _levelInterval = Duration(milliseconds: 200);
 
   final AudioRecorder _recorder;
+
+  @override
+  Stream<double> get levels => _recorder
+      .onAmplitudeChanged(_levelInterval)
+      .map((amplitude) => amplitude.current);
 
   @override
   Future<bool> start() async {

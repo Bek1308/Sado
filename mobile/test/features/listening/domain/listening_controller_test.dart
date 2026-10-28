@@ -4,9 +4,11 @@ import 'package:sado/core/audio/record_voice_recorder.dart';
 import 'package:sado/core/audio/voice_recorder.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/error/result.dart';
+import 'package:sado/features/listening/domain/entities/transcription.dart';
 import 'package:sado/features/listening/domain/repositories/transcription_repository.dart';
 import 'package:sado/features/listening/presentation/providers/listening_providers.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
+import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
 
 const _recording = RecordedAudio(path: '/tmp/a.m4a', mimeType: 'audio/mp4');
 
@@ -20,22 +22,19 @@ final class _FakeRecorder implements VoiceRecorder {
 
   @override
   Future<RecordedAudio?> stop() async => _recording;
+
+  @override
+  Stream<double> get levels => const Stream.empty();
 }
 
 final class _FakeRepository implements TranscriptionRepository {
   _FakeRepository(this.result);
 
-  final Result<String> result;
-  SpokenLanguage? askedLanguage;
+  final Result<Transcription> result;
 
   @override
-  Future<Result<String>> transcribe(
-    RecordedAudio recording,
-    SpokenLanguage language,
-  ) async {
-    askedLanguage = language;
-    return result;
-  }
+  Future<Result<Transcription>> transcribe(RecordedAudio recording) async =>
+      result;
 }
 
 ProviderContainer _container(
@@ -55,8 +54,10 @@ ProviderContainer _container(
 }
 
 void main() {
-  test('records, then shows what was heard in the chosen language', () async {
-    final repository = _FakeRepository(const Ok('салом'));
+  test('records, then shows what was heard in the detected language', () async {
+    final repository = _FakeRepository(
+      const Ok((text: 'салом', language: SpokenLanguage.tajik)),
+    );
     final container = _container(repository);
     final controller = container.read(listeningControllerProvider.notifier);
 
@@ -66,18 +67,29 @@ void main() {
       isA<ListeningRecording>(),
     );
 
-    await controller.stop(SpokenLanguage.tajik);
+    await controller.stop();
 
     expect(
       container.read(listeningControllerProvider),
-      isA<ListeningHeard>().having((heard) => heard.text, 'text', 'салом'),
+      isA<ListeningHeard>()
+          .having((heard) => heard.text, 'text', 'салом')
+          .having(
+            (heard) => heard.language,
+            'language',
+            SpokenLanguage.tajik,
+          ),
     );
-    expect(repository.askedLanguage, SpokenLanguage.tajik);
+    expect(
+      container.read(spokenLanguageProvider),
+      SpokenLanguage.tajik,
+    );
   });
 
   test('reports a denied microphone', () async {
     final container = _container(
-      _FakeRepository(const Ok('')),
+      _FakeRepository(
+        const Ok((text: '', language: SpokenLanguage.uzbek)),
+      ),
       microphoneAllowed: false,
     );
 
@@ -93,7 +105,7 @@ void main() {
     final controller = container.read(listeningControllerProvider.notifier);
 
     await controller.start();
-    await controller.stop(SpokenLanguage.uzbek);
+    await controller.stop();
 
     expect(
       container.read(listeningControllerProvider),

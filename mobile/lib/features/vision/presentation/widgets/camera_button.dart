@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/vision/presentation/providers/vision_providers.dart';
 
 /// Captures a paper with the camera; its explanation arrives through
 /// [onExplained].
 class CameraButton extends ConsumerWidget {
-  const CameraButton({
-    required this.language,
-    required this.onExplained,
-    super.key,
-  });
+  const CameraButton({required this.onExplained, super.key});
 
-  final SpokenLanguage language;
   final ValueChanged<String> onExplained;
 
   static const size = 48.0;
@@ -38,7 +32,7 @@ class CameraButton extends ConsumerWidget {
           : IconButton.filledTonal(
               tooltip: 'Photograph a paper',
               icon: const Icon(Icons.camera_alt_outlined),
-              onPressed: () => controller.explain(language),
+              onPressed: controller.explain,
             ),
     );
   }

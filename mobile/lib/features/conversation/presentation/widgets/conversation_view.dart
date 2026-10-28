@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/theme/app_spacing.dart';
-import 'package:sado/core/widgets/sado_orb.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
+import 'package:sado/features/conversation/presentation/widgets/sado_face.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/expression_cue.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
@@ -59,7 +59,7 @@ class _Welcome extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SadoOrb(size: 96, glow: true),
+            const SadoFace(),
             const SizedBox(height: AppSpacing.xxl),
             Text(
               'One voice. Every language.',

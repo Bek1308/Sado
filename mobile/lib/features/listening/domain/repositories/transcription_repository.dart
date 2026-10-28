@@ -1,11 +1,8 @@
 import 'package:sado/core/audio/voice_recorder.dart';
 import 'package:sado/core/error/result.dart';
-import 'package:sado/features/speech/domain/entities/spoken_language.dart';
+import 'package:sado/features/listening/domain/entities/transcription.dart';
 
 abstract interface class TranscriptionRepository {
-  /// Returns what was said in the recording, as text.
-  Future<Result<String>> transcribe(
-    RecordedAudio recording,
-    SpokenLanguage language,
-  );
+  /// Returns what was said in the recording, with the detected language.
+  Future<Result<Transcription>> transcribe(RecordedAudio recording);
 }

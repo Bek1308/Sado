@@ -6,6 +6,7 @@ import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/error/result.dart';
 import 'package:sado/features/listening/data/datasources/transcription_remote_data_source.dart';
 import 'package:sado/features/listening/data/repositories/transcription_repository_impl.dart';
+import 'package:sado/features/listening/domain/entities/transcription.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 class _MockRemoteDataSource extends Mock
@@ -24,24 +25,27 @@ void main() {
 
   test('returns the transcript from the server', () async {
     when(
-      () => remoteDataSource.transcribe(_recording, SpokenLanguage.uzbek),
-    ).thenAnswer((_) async => 'salom');
-
-    final result = await repository.transcribe(
-      _recording,
-      SpokenLanguage.uzbek,
+      () => remoteDataSource.transcribe(_recording),
+    ).thenAnswer(
+      (_) async => (text: 'salom', language: SpokenLanguage.uzbek),
     );
+
+    final result = await repository.transcribe(_recording);
 
     expect(
       result,
-      isA<Ok<String>>().having((ok) => ok.value, 'value', 'salom'),
+      isA<Ok<Transcription>>().having(
+        (ok) => ok.value,
+        'value',
+        (text: 'salom', language: SpokenLanguage.uzbek),
+      ),
     );
   });
 
   test('explains when speech recognition is unavailable', () async {
     final request = RequestOptions(path: '/transcriptions');
     when(
-      () => remoteDataSource.transcribe(_recording, SpokenLanguage.uzbek),
+      () => remoteDataSource.transcribe(_recording),
     ).thenThrow(
       DioException.badResponse(
         statusCode: 503,
@@ -54,14 +58,11 @@ void main() {
       ),
     );
 
-    final result = await repository.transcribe(
-      _recording,
-      SpokenLanguage.uzbek,
-    );
+    final result = await repository.transcribe(_recording);
 
     expect(
       result,
-      isA<Err<String>>().having(
+      isA<Err<Transcription>>().having(
         (err) => err.failure,
         'failure',
         isA<ServerFailure>().having(

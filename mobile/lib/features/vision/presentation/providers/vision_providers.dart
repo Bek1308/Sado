@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/camera/photo_picker.dart';
 import 'package:sado/core/error/result.dart';
 import 'package:sado/core/network/http_client.dart';
-import 'package:sado/features/speech/domain/entities/spoken_language.dart';
+import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
 import 'package:sado/features/vision/data/datasources/explanation_remote_data_source.dart';
 import 'package:sado/features/vision/data/repositories/explanation_repository_impl.dart';
 import 'package:sado/features/vision/domain/repositories/explanation_repository.dart';
@@ -51,7 +51,7 @@ class VisionController extends Notifier<VisionState> {
   @override
   VisionState build() => const VisionIdle();
 
-  Future<void> explain(SpokenLanguage language) async {
+  Future<void> explain() async {
     final Photograph? photo;
     try {
       photo = await ref.read(photoPickerProvider).takePhoto();
@@ -67,7 +67,7 @@ class VisionController extends Notifier<VisionState> {
     state = const VisionExplaining();
     final result = await ref
         .read(explainPhotographProvider)
-        .call(photo, language);
+        .call(photo, ref.read(spokenLanguageProvider));
     state = switch (result) {
       Ok(:final value) => VisionExplained(value),
       Err(:final failure) => VisionFailed(failure.message),

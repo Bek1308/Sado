@@ -9,4 +9,11 @@ enum SpokenLanguage {
   /// ISO 639-1 code shared with the server.
   final String code;
   final String nativeName;
+
+  /// Parses a server language code; unknown codes fall back to Uzbek.
+  static SpokenLanguage fromCode(String code) =>
+      SpokenLanguage.values.firstWhere(
+        (language) => language.code == code,
+        orElse: () => SpokenLanguage.uzbek,
+      );
 }

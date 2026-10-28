@@ -7,6 +7,7 @@ import 'package:sado/features/listening/data/repositories/transcription_reposito
 import 'package:sado/features/listening/domain/repositories/transcription_repository.dart';
 import 'package:sado/features/listening/domain/usecases/transcribe_recording.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
+import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
 
 final transcriptionRepositoryProvider = Provider<TranscriptionRepository>(
   (ref) => TranscriptionRepositoryImpl(
@@ -40,9 +41,10 @@ final class ListeningTranscribing extends ListeningState {
 }
 
 final class ListeningHeard extends ListeningState {
-  const ListeningHeard(this.text);
+  const ListeningHeard(this.text, this.language);
 
   final String text;
+  final SpokenLanguage language;
 }
 
 final class ListeningFailed extends ListeningState {
@@ -62,7 +64,7 @@ class ListeningController extends Notifier<ListeningState> {
         : const ListeningFailed('Microphone access was denied');
   }
 
-  Future<void> stop(SpokenLanguage language) async {
+  Future<void> stop() async {
     final recording = await ref.read(voiceRecorderProvider).stop();
     if (recording == null) {
       state = const ListeningIdle();
@@ -70,12 +72,14 @@ class ListeningController extends Notifier<ListeningState> {
     }
 
     state = const ListeningTranscribing();
-    final result = await ref
-        .read(transcribeRecordingProvider)
-        .call(recording, language);
-    state = switch (result) {
-      Ok(:final value) => ListeningHeard(value),
+    final result = await ref.read(transcribeRecordingProvider).call(recording);
+    final heard = switch (result) {
+      Ok(:final value) => ListeningHeard(value.text, value.language),
       Err(:final failure) => ListeningFailed(failure.message),
     };
+    state = heard;
+    if (heard is ListeningHeard) {
+      ref.read(spokenLanguageProvider.notifier).current = heard.language;
+    }
   }
 }

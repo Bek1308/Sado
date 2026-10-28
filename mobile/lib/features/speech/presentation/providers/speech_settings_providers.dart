@@ -7,12 +7,16 @@ final spokenLanguageProvider =
       SpokenLanguageSetting.new,
     );
 
+/// The language Sado currently hears and answers in. Nobody picks it by
+/// hand: every transcription updates it to the detected language.
 class SpokenLanguageSetting extends Notifier<SpokenLanguage> {
   @override
-  SpokenLanguage build() => SpokenLanguage.tajik;
+  SpokenLanguage build() => SpokenLanguage.uzbek;
 
-  SpokenLanguage get selected => state;
-  set selected(SpokenLanguage language) => state = language;
+  SpokenLanguage get current => state;
+
+  /// Remembers the language the server detected in the last recording.
+  set current(SpokenLanguage language) => state = language;
 }
 
 final moodProvider = NotifierProvider<MoodSetting, Mood>(MoodSetting.new);

@@ -36,7 +36,15 @@ Future<void> _pumpHomePage(
       child: const MaterialApp(home: HomePage()),
     ),
   );
-  await tester.pumpAndSettle();
+  await _settle(tester);
+}
+
+/// Sado's face breathes forever, so pumpAndSettle would never return; a
+/// second of frames is enough for futures and transitions to finish.
+Future<void> _settle(WidgetTester tester) async {
+  for (var frame = 0; frame < 10; frame++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
 }
 
 ListTile _voice(WidgetTester tester, String name) =>
@@ -80,7 +88,7 @@ void main() {
     await _pumpHomePage(tester, _online);
 
     await tester.tap(find.byTooltip('Voice & style'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
 
     expect(_voice(tester, 'Sado').selected, isTrue);
     expect(_voice(tester, 'Opa').selected, isFalse);

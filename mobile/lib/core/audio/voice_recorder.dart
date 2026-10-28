@@ -13,4 +13,7 @@ abstract interface class VoiceRecorder {
   /// Stops capturing and returns the recording, or `null` if nothing was
   /// being recorded.
   Future<RecordedAudio?> stop();
+
+  /// Live loudness in dBFS while recording; silence sits near -160.
+  Stream<double> get levels;
 }

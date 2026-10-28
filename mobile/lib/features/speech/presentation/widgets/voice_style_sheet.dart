@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/features/speech/domain/entities/mood.dart';
-import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
 import 'package:sado/features/voices/presentation/widgets/voice_picker.dart';
 
@@ -20,7 +19,6 @@ class VoiceStyleSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final language = ref.watch(spokenLanguageProvider);
     final mood = ref.watch(moodProvider);
 
     return SingleChildScrollView(
@@ -48,23 +46,6 @@ class VoiceStyleSheet extends ConsumerWidget {
                     selected: option == mood,
                     onSelected: (_) =>
                         ref.read(moodProvider.notifier).selected = option,
-                  ),
-              ],
-            ),
-          ),
-          _Section(
-            title: 'Language',
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (final option in SpokenLanguage.values)
-                  ChoiceChip(
-                    label: Text(option.nativeName),
-                    selected: option == language,
-                    onSelected: (_) =>
-                        ref.read(spokenLanguageProvider.notifier).selected =
-                            option,
                   ),
               ],
             ),

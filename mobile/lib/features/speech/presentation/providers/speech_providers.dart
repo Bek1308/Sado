@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/audio/audioplayers_output.dart';
 import 'package:sado/core/error/result.dart';
@@ -29,8 +31,9 @@ final speakControllerProvider = AsyncNotifierProvider<SpeakController, void>(
 );
 
 class SpeakController extends AsyncNotifier<void> {
+  // Synchronous, so Sado starts out idle instead of looking busy for a frame.
   @override
-  Future<void> build() async {}
+  FutureOr<void> build() {}
 
   Future<void> speak(
     String text,

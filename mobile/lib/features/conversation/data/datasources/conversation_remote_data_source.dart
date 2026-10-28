@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
@@ -13,11 +14,15 @@ class ConversationRemoteDataSource {
   Future<SadoReply> reply(
     List<ChatMessage> conversation,
     SpokenLanguage language,
+    SadoMode mode,
   ) async {
     final response = await _httpClient.post<Map<String, dynamic>>(
       _repliesPath,
       data: {
         'language': language.code,
+        'mode': mode.code,
+        // Lets Sado read "tomorrow at 9" on the user's own clock.
+        'utc_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
         'messages': [
           for (final message in conversation)
             {'speaker': message.speaker.code, 'text': message.text},

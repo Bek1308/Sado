@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sado/core/audio/voice_recorder.dart';
+import 'package:sado/features/listening/domain/entities/transcription.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 class TranscriptionRemoteDataSource {
@@ -9,12 +10,9 @@ class TranscriptionRemoteDataSource {
 
   final Dio _httpClient;
 
-  Future<String> transcribe(
-    RecordedAudio recording,
-    SpokenLanguage language,
-  ) async {
+  /// Sends audio without a language; the server detects it.
+  Future<Transcription> transcribe(RecordedAudio recording) async {
     final form = FormData.fromMap({
-      'language': language.code,
       'audio': await MultipartFile.fromFile(
         recording.path,
         contentType: DioMediaType.parse(recording.mimeType),
@@ -24,6 +22,10 @@ class TranscriptionRemoteDataSource {
       _transcriptionsPath,
       data: form,
     );
-    return response.data!['text'] as String;
+    final data = response.data!;
+    return (
+      text: data['text'] as String,
+      language: SpokenLanguage.fromCode(data['language'] as String),
+    );
   }
 }
