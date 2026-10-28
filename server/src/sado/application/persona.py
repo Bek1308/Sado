@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from sado.domain.language import Language
+from sado.domain.mode import Mode
 
 _LANGUAGE_RULES = {
     Language.UZBEK: "Always answer in Uzbek, written in the Latin alphabet.",
@@ -23,6 +24,16 @@ Everything you write is read aloud by a speech engine, so:
 """
 
 
+_MODE_RULES = {
+    Mode.HOME: "Home mode: warm and family-friendly. Help with the household.",
+    Mode.PERSONAL: "Personal mode: a witty everyday companion.",
+    Mode.WORK: "Work mode: brief and professional. Explain papers plainly, skip small talk.",
+    Mode.ON_THE_GO: (
+        "On-the-go mode: the user is walking or commuting. "
+        "Answer in one or two very short sentences."
+    ),
+}
+
 _MEMORY_INTRO = (
     "The user asked you to remember these facts. Use them when they help, and never invent others:"
 )
@@ -30,16 +41,23 @@ _MEMORY_INTRO = (
 _DUE_INTRO = "These reminders are now due. Mention them naturally when they fit the conversation:"
 
 
+def _offset(moment: datetime) -> str:
+    raw = f"{moment:%z}" or "+0000"
+    return f"UTC{raw[:3]}:{raw[3:]}"
+
+
 def persona_instructions(
     language: Language,
     memories: Sequence[str] = (),
     due_reminders: Sequence[str] = (),
+    mode: Mode = Mode.PERSONAL,
     now: datetime | None = None,
 ) -> str:
+    """`now` carries the user's own UTC offset, so "tomorrow" means their tomorrow."""
     moment = now or datetime.now(UTC)
     instructions = (
-        f"{_PERSONA}\n{_LANGUAGE_RULES[language]}\n"
-        f"The current time is {moment:%A, %d %B %Y at %H:%M} UTC."
+        f"{_PERSONA}\n{_LANGUAGE_RULES[language]}\n{_MODE_RULES[mode]}\n"
+        f"The user's local time is {moment:%A, %d %B %Y at %H:%M} ({_offset(moment)})."
     )
     if memories:
         facts = "\n".join(f"- {memory}" for memory in memories)

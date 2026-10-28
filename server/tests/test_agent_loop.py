@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -17,6 +18,7 @@ from sado.domain.conversation import (
 )
 from sado.domain.errors import ReasoningUnavailableError
 from sado.domain.language import Language
+from sado.domain.mode import Mode
 from sado.infrastructure.memory.sqlite_reminders import SqliteReminderStore
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 
@@ -121,7 +123,7 @@ def test_sets_what_the_model_asks_to_remind_and_then_answers() -> None:
     reply = Converse(model, None, reminders).execute(_QUESTION, Language.UZBEK)
 
     assert reply.text == "Done!"
-    assert reply.reminded == ("Call mother (29 Oct, 18:00 UTC)",)
+    assert reply.reminded == ("Call mother (29 Oct, 18:00)",)
     assert [reminder.text for reminder in reminders.saved()] == ["Call mother"]
     assert model.tools[0] == [REMIND]
     assert model.steps[1][0].results[0].output == "Set."
@@ -158,6 +160,14 @@ def test_offers_both_tools_when_both_stores_exist() -> None:
     assert model.tools[0] == [REMEMBER, REMIND]
 
 
+def test_speaks_in_the_requested_mode() -> None:
+    model = _ScriptedModel(Answer("Done."))
+
+    Converse(model).execute(_QUESTION, Language.UZBEK, Mode.WORK)
+
+    assert "Work mode" in model.instructions[0]
+
+
 def test_mentions_due_reminders_in_the_instructions() -> None:
     reminders = _reminders()
     reminders.remind("Call mother", "2000-01-01T09:00:00+00:00")
@@ -166,5 +176,19 @@ def test_mentions_due_reminders_in_the_instructions() -> None:
 
     Converse(model, None, reminders).execute(_QUESTION, Language.UZBEK)
 
-    assert "Call mother (01 Jan, 09:00 UTC)" in model.instructions[0]
+    assert "Call mother (01 Jan, 09:00)" in model.instructions[0]
     assert "Far future" not in model.instructions[0]
+
+
+def test_reads_reminder_times_on_the_users_clock() -> None:
+    reminders = _reminders()
+    model = _ScriptedModel(_remind("Bankka borish", "2026-10-30T09:00:00"), Answer("Bo'ldi!"))
+
+    reply = Converse(model, None, reminders).execute(
+        _QUESTION, Language.UZBEK, utc_offset=timedelta(hours=5)
+    )
+
+    assert reply.reminded == ("Bankka borish (30 Oct, 09:00)",)
+    saved = reminders.saved()[0]
+    assert saved.due_at == datetime(2026, 10, 30, 4, 0, tzinfo=UTC)
+    assert "(UTC+05:00)" in model.instructions[0]

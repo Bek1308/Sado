@@ -69,3 +69,73 @@ def test_replies_endpoint_returns_sado_answer() -> None:
         "remembered": [],
         "reminded": [],
     }
+
+
+def test_replies_endpoint_accepts_an_explicit_mode() -> None:
+    pack, _ = fake_language_pack(Language.TAJIK)
+    client = TestClient(
+        create_app(
+            language_packs={Language.TAJIK: pack},
+            voice_catalog=fake_voice_catalog(),
+            reasoning_model=_ParrotModel(),
+        )
+    )
+
+    response = client.post(
+        "/replies",
+        json={
+            "language": "tg",
+            "mode": "work",
+            "messages": [{"speaker": "user", "text": "салом"}],
+        },
+    )
+
+    assert response.status_code == 200
+
+
+def test_replies_endpoint_rejects_an_unknown_mode() -> None:
+    pack, _ = fake_language_pack(Language.TAJIK)
+    client = TestClient(
+        create_app(
+            language_packs={Language.TAJIK: pack},
+            voice_catalog=fake_voice_catalog(),
+            reasoning_model=_ParrotModel(),
+        )
+    )
+
+    response = client.post(
+        "/replies",
+        json={
+            "language": "tg",
+            "mode": "party",
+            "messages": [{"speaker": "user", "text": "салом"}],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_replies_endpoint_uses_the_users_clock() -> None:
+    pack, _ = fake_language_pack(Language.UZBEK)
+    model = _ParrotModel()
+    client = TestClient(
+        create_app(
+            language_packs={Language.UZBEK: pack},
+            voice_catalog=fake_voice_catalog(),
+            reasoning_model=model,
+        )
+    )
+    message = {"speaker": "user", "text": "salom"}
+
+    ok = client.post(
+        "/replies",
+        json={"language": "uz", "utc_offset_minutes": 300, "messages": [message]},
+    )
+    too_far = client.post(
+        "/replies",
+        json={"language": "uz", "utc_offset_minutes": 2000, "messages": [message]},
+    )
+
+    assert ok.status_code == 200
+    assert "(UTC+05:00)" in model.instructions[-1]
+    assert too_far.status_code == 422

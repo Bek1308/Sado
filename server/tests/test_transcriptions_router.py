@@ -41,3 +41,13 @@ def test_requires_a_known_language() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_detects_the_language_when_it_is_not_given() -> None:
+    response = _client().post(
+        "/transcriptions",
+        files={"audio": ("speech.webm", "салом".encode(), "audio/webm")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"text": "салом", "language": "tg"}

@@ -1,2 +1,5 @@
 # Generated mood reference clips (scripts/build_mood_references.py)
 data/
+
+# Local run logs
+.run/

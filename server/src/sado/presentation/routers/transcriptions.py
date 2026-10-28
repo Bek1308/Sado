@@ -22,13 +22,16 @@ class TranscriptionResponse(BaseModel):
 @router.post("")
 def transcribe(
     audio: UploadFile,
-    language: Annotated[Language, Form()],
     transcribe_speech: Annotated[TranscribeSpeech, Depends(get_transcribe_speech)],
+    language: Annotated[Language | None, Form()] = None,
 ) -> TranscriptionResponse:
     data = audio.file.read(_MAX_RECORDING_BYTES + 1)
     if len(data) > _MAX_RECORDING_BYTES:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "Recording is larger than 10 MB")
 
     recording = Recording(data=data, media_type=audio.content_type or _DEFAULT_MEDIA_TYPE)
+    if language is None:
+        transcript, detected = transcribe_speech.execute_auto(recording)
+        return TranscriptionResponse(text=transcript.text, language=detected)
     transcript = transcribe_speech.execute(recording, language)
     return TranscriptionResponse(text=transcript.text, language=language)
