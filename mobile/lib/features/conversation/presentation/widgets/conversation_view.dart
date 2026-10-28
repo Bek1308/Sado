@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/core/widgets/sado_orb.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
+import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/expression_cue.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
@@ -105,61 +107,106 @@ class _Bubble extends ConsumerWidget {
 
     return Align(
       alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        decoration: BoxDecoration(
-          color: fromUser ? colors.primary : colors.surfaceContainerHigh,
-          borderRadius: BorderRadius.only(
-            topLeft: round,
-            topRight: round,
-            bottomLeft: fromUser ? round : tail,
-            bottomRight: fromUser ? tail : round,
+      child: GestureDetector(
+        onLongPress: () => _showActions(context, ref),
+        child: Container(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          decoration: BoxDecoration(
+            color: fromUser ? colors.primary : colors.surfaceContainerHigh,
+            borderRadius: BorderRadius.only(
+              topLeft: round,
+              topRight: round,
+              bottomLeft: fromUser ? round : tail,
+              bottomRight: fromUser ? tail : round,
+            ),
           ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            fromUser ? AppSpacing.lg : AppSpacing.xs,
-            fromUser ? AppSpacing.md : AppSpacing.xs,
-          ),
-          child: fromUser
-              ? Text(
-                  message.text,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: colors.onPrimary,
-                  ),
-                )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: Text(
-                          ExpressionCue.withoutCues(message.text),
-                          style: theme.textTheme.bodyLarge,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              fromUser ? AppSpacing.lg : AppSpacing.xs,
+              fromUser ? AppSpacing.md : AppSpacing.xs,
+            ),
+            child: fromUser
+                ? Text(
+                    message.text,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Text(
+                            ExpressionCue.withoutCues(message.text),
+                            style: theme.textTheme.bodyLarge,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Play again',
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 20,
-                      color: colors.onSurfaceVariant,
-                      icon: const Icon(Icons.volume_up_outlined),
-                      onPressed: () => ref
-                          .read(speakControllerProvider.notifier)
-                          .say(message.text),
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        tooltip: 'Play again',
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 20,
+                        color: colors.onSurfaceVariant,
+                        icon: const Icon(Icons.volume_up_outlined),
+                        onPressed: () => ref
+                            .read(speakControllerProvider.notifier)
+                            .say(message.text),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
   }
+
+  Future<void> _showActions(BuildContext context, WidgetRef ref) async {
+    final text = ExpressionCue.withoutCues(message.text);
+    final action = await showModalBottomSheet<_BubbleAction>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (message.speaker == ChatSpeaker.user)
+              ListTile(
+                leading: const Icon(Icons.bookmark_add_outlined),
+                title: const Text('Remember this'),
+                subtitle: const Text('Sado will keep it in Memories'),
+                onTap: () => Navigator.of(context).pop(_BubbleAction.remember),
+              ),
+            ListTile(
+              leading: const Icon(Icons.copy_outlined),
+              title: const Text('Copy text'),
+              onTap: () => Navigator.of(context).pop(_BubbleAction.copy),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final note = switch (action) {
+      _BubbleAction.remember =>
+        await ref.read(memoriesControllerProvider.notifier).remember(text) ??
+            'Sado will remember this.',
+      _BubbleAction.copy => await Clipboard.setData(
+        ClipboardData(text: text),
+      ).then((_) => 'Copied.'),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note)));
+  }
 }
+
+enum _BubbleAction { remember, copy }
 
 class _ThinkingBubble extends StatefulWidget {
   const _ThinkingBubble();

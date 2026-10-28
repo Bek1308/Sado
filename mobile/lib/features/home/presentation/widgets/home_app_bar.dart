@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sado/core/error/result.dart';
+import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/core/theme/app_theme.dart';
 import 'package:sado/core/widgets/sado_orb.dart';
@@ -50,6 +52,11 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 ref.read(conversationControllerProvider.notifier).startOver(),
           ),
         const LanguageMenuButton(),
+        IconButton(
+          tooltip: 'Memories',
+          icon: const Icon(Icons.bookmarks_outlined),
+          onPressed: () => context.push(AppRoutes.memories),
+        ),
         IconButton(
           tooltip: 'Voice & style',
           icon: const Icon(Icons.tune),
