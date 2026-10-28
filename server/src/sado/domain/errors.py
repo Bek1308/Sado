@@ -35,9 +35,16 @@ class EmptyPaperError(SadoError):
 class UnsupportedPaperError(SadoError):
     def __init__(self, media_type: str) -> None:
         super().__init__(
-            f"Cannot explain '{media_type}'; send a photo (JPEG, PNG, WebP) or a text file"
+            f"Cannot explain '{media_type}'; send a photo (JPEG, PNG, GIF, WebP), "
+            "an audio or video recording, or a text, PDF, Word, Excel, PowerPoint, "
+            "OpenDocument or HTML file"
         )
         self.media_type = media_type
+
+
+class UnreadablePaperError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("No readable text found in this file; photograph its pages instead")
 
 
 class SpeechRecognitionUnavailableError(SadoError):

@@ -19,7 +19,7 @@ from sado.domain.conversation import (
     ToolStep,
 )
 from sado.domain.errors import ReasoningUnavailableError, UnsupportedPaperError
-from sado.domain.vision import Explanation, Paper, PaperKind, paper_kind
+from sado.domain.vision import Explanation, Paper, PaperKind, decode_text, paper_kind
 
 MODEL_API_URL = "https://api.meta.ai/v1"
 
@@ -78,7 +78,6 @@ class MuseSparkReasoner:
         return message
 
 
-_TEXT_ENCODINGS = ("utf-8-sig", "windows-1251")
 _MAX_TEXT_CHARS = 12_000
 
 
@@ -94,18 +93,9 @@ def _user_content(paper: Paper) -> str | list[dict[str, Any]]:
                 },
             ]
         case PaperKind.TEXT:
-            return f"What is this paper?\n\n{_read_text(paper.data)}"
-        case None:
+            return f"What is this paper?\n\n{_clip(decode_text(paper.data))}"
+        case PaperKind.DOCUMENT | PaperKind.SPOKEN | None:
             raise UnsupportedPaperError(paper.media_type)
-
-
-def _read_text(data: bytes) -> str:
-    for encoding in _TEXT_ENCODINGS:
-        try:
-            return _clip(data.decode(encoding))
-        except UnicodeDecodeError:
-            continue
-    raise UnsupportedPaperError("undecodable text")
 
 
 def _clip(text: str) -> str:

@@ -181,7 +181,15 @@ def test_keeps_the_head_and_tail_of_a_long_text_file() -> None:
 
 
 def test_rejects_a_file_type_sado_cannot_read() -> None:
-    paper = Paper(data=b"sound", media_type="audio/mpeg")
+    paper = Paper(data=b"archived", media_type="application/zip")
+
+    with pytest.raises(UnsupportedPaperError):
+        _reasoner(_message(content="ok"), []).explain(paper, "Be Sado.")
+
+
+@pytest.mark.parametrize("media_type", ["application/pdf", "audio/mpeg"])
+def test_rejects_kinds_the_use_case_must_prepare_first(media_type: str) -> None:
+    paper = Paper(data=b"data", media_type=media_type)
 
     with pytest.raises(UnsupportedPaperError):
         _reasoner(_message(content="ok"), []).explain(paper, "Be Sado.")

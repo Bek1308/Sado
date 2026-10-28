@@ -8,9 +8,13 @@ dependencies = [
     "fastapi>=0.115",
     "httpx>=0.28.1",
     "num2words>=0.5.14",
+    "olefile==0.47",
+    "openpyxl==3.1.5",
     "pydantic-settings>=2.6",
+    "pypdf==6.21.3",
     "python-multipart>=0.0.32",
     "uvicorn[standard]>=0.32",
+    "xlrd==2.0.2",
 ]
 
 [project.optional-dependencies]
@@ -67,7 +71,7 @@ mypy_path = "src"
 packages = ["sado"]
 
 [[tool.mypy.overrides]]
-module = ["num2words", "omnivoice", "torch", "transformers"]
+module = ["num2words", "olefile", "omnivoice", "openpyxl", "torch", "transformers", "xlrd"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

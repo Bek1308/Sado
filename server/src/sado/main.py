@@ -21,6 +21,7 @@ from sado.domain.memory import MemoryStore
 from sado.domain.reminder import ReminderStore
 from sado.domain.speech import LanguagePack
 from sado.domain.vision import DocumentExplainer
+from sado.infrastructure.documents.readers import CompositeDocumentReader
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
 from sado.infrastructure.memory.sqlite_reminders import SqliteReminderStore
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
@@ -108,7 +109,8 @@ def create_app(  # noqa: PLR0913
     packs = language_packs or build_language_packs(_voice_config(settings))
     app.state.voice_catalog = catalog
     app.state.speak_text = SpeakText(packs, catalog)
-    app.state.transcribe_speech = TranscribeSpeech(packs)
+    transcribe_speech = TranscribeSpeech(packs)
+    app.state.transcribe_speech = transcribe_speech
     saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))
     app.state.memories = saved
     alarms = Reminders(reminder_store or SqliteReminderStore(settings.memory_db_path))
@@ -122,7 +124,9 @@ def create_app(  # noqa: PLR0913
             document_explainer = model
         else:
             document_explainer = UnavailableReasoner()
-    app.state.explain_document = ExplainDocument(document_explainer)
+    app.state.explain_document = ExplainDocument(
+        document_explainer, CompositeDocumentReader(), transcribe_speech
+    )
 
     register_error_handlers(app)
     app.include_router(health.router)

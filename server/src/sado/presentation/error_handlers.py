@@ -15,6 +15,7 @@ from sado.domain.errors import (
     UnknownMemoryError,
     UnknownReminderError,
     UnknownVoiceError,
+    UnreadablePaperError,
     UnsupportedLanguageError,
     UnsupportedPaperError,
 )
@@ -26,6 +27,7 @@ _STATUS_BY_ERROR: dict[type[SadoError], int] = {
     EmptyRecordingError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     EmptyPaperError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     UnsupportedPaperError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    UnreadablePaperError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     SpeechRecognitionUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
     NothingToAnswerError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     ReasoningUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
