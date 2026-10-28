@@ -76,5 +76,20 @@ class ConversationController extends Notifier<ConversationState> {
     }
   }
 
+  /// Shows a photographed paper and Sado's explanation of it, without
+  /// asking the agent again.
+  void showExplanation(String explanation) {
+    state = ConversationState(
+      messages: [
+        ...state.messages,
+        const ChatMessage(
+          speaker: ChatSpeaker.user,
+          text: '[Photo of a paper]',
+        ),
+        ChatMessage(speaker: ChatSpeaker.sado, text: explanation),
+      ],
+    );
+  }
+
   void startOver() => state = const ConversationState();
 }

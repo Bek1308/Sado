@@ -9,6 +9,7 @@ import 'package:sado/features/home/presentation/widgets/home_app_bar.dart';
 import 'package:sado/features/listening/presentation/providers/listening_providers.dart';
 import 'package:sado/features/server_status/presentation/widgets/server_status_banner.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
+import 'package:sado/features/vision/presentation/providers/vision_providers.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -56,6 +57,9 @@ class HomePage extends ConsumerWidget {
       })
       ..listen(listeningControllerProvider, (_, next) {
         if (next case ListeningFailed(:final message)) show(message);
+      })
+      ..listen(visionControllerProvider, (_, next) {
+        if (next case VisionFailed(:final message)) show(message);
       })
       ..listen(conversationControllerProvider, (previous, next) {
         final error = next.error;

@@ -4,6 +4,8 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sado listens when you hold the microphone button so it can understand what you say.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Sado photographs papers so it can read and explain them to you.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

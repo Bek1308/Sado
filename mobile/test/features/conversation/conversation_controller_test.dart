@@ -72,6 +72,25 @@ void main() {
     ]);
   });
 
+  test('shows a photographed paper and its explanation', () {
+    final container = _container(
+      _FakeRepository(const Ok(SadoReply(text: 'unused'))),
+    );
+
+    container
+        .read(conversationControllerProvider.notifier)
+        .showExplanation('This is a notice.');
+
+    final messages = container.read(conversationControllerProvider).messages;
+    expect(
+      [for (final m in messages) (m.speaker, m.text)],
+      [
+        (ChatSpeaker.user, '[Photo of a paper]'),
+        (ChatSpeaker.sado, 'This is a notice.'),
+      ],
+    );
+  });
+
   test('shows why Sado could not answer', () async {
     final container = _container(
       _FakeRepository(const Err(ServerFailure('Sado cannot think right now'))),

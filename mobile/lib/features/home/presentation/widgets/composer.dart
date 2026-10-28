@@ -7,6 +7,7 @@ import 'package:sado/features/listening/presentation/widgets/mic_button.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
 import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
 import 'package:sado/features/speech/presentation/widgets/expression_cue_button.dart';
+import 'package:sado/features/vision/presentation/widgets/camera_button.dart';
 
 /// Where the user talks or types to Sado.
 ///
@@ -45,7 +46,21 @@ class _ComposerState extends ConsumerState<Composer> {
           ),
         );
     }
+    if (reply.reminded.isNotEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Reminder set: ${reply.reminded.join(' · ')}'),
+          ),
+        );
+    }
     await ref.read(speakControllerProvider.notifier).say(reply.text);
+  }
+
+  Future<void> _showExplanation(String text) async {
+    ref.read(conversationControllerProvider.notifier).showExplanation(text);
+    await ref.read(speakControllerProvider.notifier).say(text);
   }
 
   @override
@@ -104,6 +119,7 @@ class _ComposerState extends ConsumerState<Composer> {
                   ),
                 ),
               ),
+              CameraButton(language: language, onExplained: _showExplanation),
               if (hasText)
                 SizedBox.square(
                   dimension: MicButton.size,

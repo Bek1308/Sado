@@ -27,10 +27,14 @@ class ConversationRemoteDataSource {
     final data = response.data!;
     return SadoReply(
       text: data['reply'] as String,
-      // Older servers did not report what Sado remembered.
+      // Older servers did not report what Sado remembered or set.
       remembered: [
         for (final fact in data['remembered'] as List<dynamic>? ?? const [])
           fact as String,
+      ],
+      reminded: [
+        for (final reminder in data['reminded'] as List<dynamic>? ?? const [])
+          reminder as String,
       ],
     );
   }
