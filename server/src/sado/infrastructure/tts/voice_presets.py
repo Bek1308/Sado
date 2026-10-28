@@ -22,17 +22,28 @@ class VoicePreset:
 
 
 VOICE_PRESETS = (
-    VoicePreset(Voice("sado", "Sado"), VoiceStyle("male, young adult, moderate pitch")),
-    VoicePreset(Voice("bobo", "Bobo — wise elder"), VoiceStyle("male, elderly, low pitch")),
-    VoicePreset(Voice("aka", "Aka — calm baritone"), VoiceStyle("male, middle-aged, low pitch")),
     VoicePreset(
-        Voice("opa", "Opa — warm and bright"), VoiceStyle("female, young adult, moderate pitch")
+        Voice("sado", "Sado", "Friendly and clear"),
+        VoiceStyle("male, young adult, moderate pitch"),
     ),
     VoicePreset(
-        Voice("momo", "Momo — gentle grandma"), VoiceStyle("female, elderly, moderate pitch")
+        Voice("bobo", "Bobo", "Wise elder"),
+        VoiceStyle("male, elderly, low pitch"),
     ),
     VoicePreset(
-        Voice("shivir", "Shivir — night whisper"),
+        Voice("aka", "Aka", "Calm baritone"),
+        VoiceStyle("male, middle-aged, low pitch"),
+    ),
+    VoicePreset(
+        Voice("opa", "Opa", "Warm and bright"),
+        VoiceStyle("female, young adult, moderate pitch"),
+    ),
+    VoicePreset(
+        Voice("momo", "Momo", "Gentle grandma"),
+        VoiceStyle("female, elderly, moderate pitch"),
+    ),
+    VoicePreset(
+        Voice("shivir", "Shivir", "Night whisper"),
         VoiceStyle("male, young adult, moderate pitch, whisper"),
     ),
 )

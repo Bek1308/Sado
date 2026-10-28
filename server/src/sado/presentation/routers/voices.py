@@ -12,6 +12,7 @@ router = APIRouter(prefix="/voices", tags=["voices"])
 class VoiceResponse(BaseModel):
     id: str
     name: str
+    description: str
     is_default: bool
 
 
@@ -20,6 +21,11 @@ def list_voices(
     catalog: Annotated[VoiceCatalog, Depends(get_voice_catalog)],
 ) -> list[VoiceResponse]:
     return [
-        VoiceResponse(id=voice.id, name=voice.name, is_default=voice == catalog.default)
+        VoiceResponse(
+            id=voice.id,
+            name=voice.name,
+            description=voice.description,
+            is_default=voice == catalog.default,
+        )
         for voice in catalog.voices
     ]

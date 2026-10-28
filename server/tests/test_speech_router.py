@@ -61,6 +61,6 @@ def test_lists_voices_and_marks_the_default() -> None:
     response = _client().get("/voices")
 
     assert response.json() == [
-        {"id": "sado", "name": "Sado", "is_default": True},
-        {"id": "opa", "name": "Opa", "is_default": False},
+        {"id": "sado", "name": "Sado", "description": "", "is_default": True},
+        {"id": "opa", "name": "Opa", "description": "", "is_default": False},
     ]

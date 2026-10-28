@@ -7,3 +7,4 @@ class Voice:
 
     id: str
     name: str
+    description: str = ""
