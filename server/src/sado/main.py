@@ -9,15 +9,20 @@ import httpx
 from fastapi import FastAPI
 
 from sado.application.converse import Converse
+from sado.application.explain_document import ExplainDocument
 from sado.application.memories import Memories
+from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
 from sado.domain.language import Language
 from sado.domain.memory import MemoryStore
+from sado.domain.reminder import ReminderStore
 from sado.domain.speech import LanguagePack
+from sado.domain.vision import DocumentExplainer
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
+from sado.infrastructure.memory.sqlite_reminders import SqliteReminderStore
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 from sado.infrastructure.reasoning.muse_spark import MuseSparkReasoner
 from sado.infrastructure.reasoning.unavailable import UnavailableReasoner
@@ -27,8 +32,10 @@ from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import (
+    explanations,
     health,
     memories,
+    reminders,
     replies,
     speech,
     transcriptions,
@@ -84,11 +91,15 @@ def _default_reasoning_model(settings: Settings) -> ReasoningModel:
     return cast(ReasoningModel, local.build_reasoner())
 
 
-def create_app(
+# One seam per layer keeps router tests hermetic without real models.
+def create_app(  # noqa: PLR0913
+    *,
     language_packs: Mapping[Language, LanguagePack] | None = None,
     voice_catalog: VoiceCatalog | None = None,
     reasoning_model: ReasoningModel | None = None,
+    document_explainer: DocumentExplainer | None = None,
     memory_store: MemoryStore | None = None,
+    reminder_store: ReminderStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=settings.version)
@@ -100,15 +111,28 @@ def create_app(
     app.state.transcribe_speech = TranscribeSpeech(packs)
     saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))
     app.state.memories = saved
-    app.state.converse = Converse(reasoning_model or _default_reasoning_model(settings), saved)
+    alarms = Reminders(reminder_store or SqliteReminderStore(settings.memory_db_path))
+    app.state.reminders = alarms
+    model = reasoning_model or _default_reasoning_model(settings)
+    app.state.converse = Converse(model, saved, alarms)
+    # Vision reuses the same thinker; a custom text-only reasoner keeps talking
+    # while document explanations report the service as unavailable.
+    if document_explainer is None:
+        if isinstance(model, (MuseSparkReasoner, UnavailableReasoner)):
+            document_explainer = model
+        else:
+            document_explainer = UnavailableReasoner()
+    app.state.explain_document = ExplainDocument(document_explainer)
 
     register_error_handlers(app)
     app.include_router(health.router)
     app.include_router(speech.router)
     app.include_router(transcriptions.router)
+    app.include_router(explanations.router)
     app.include_router(replies.router)
     app.include_router(voices.router)
     app.include_router(memories.router)
+    app.include_router(reminders.router)
     return app
 
 

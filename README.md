@@ -139,11 +139,14 @@ Sado is being built live during the hackathon. All code in this repository was w
 📐 [Engineering principles](docs/ENGINEERING.md) · 🗺️ [Roadmap](docs/ROADMAP.md)
 
 - [x] Foundations: server and mobile skeletons, Clean Architecture, CI
-- [ ] Flutter app: voice button, camera, Sado's face
+- [x] Flutter app: voice button and camera
+- [ ] Sado's face: animated character reacting to the conversation
 - [x] Hear: speech-to-text with Meta Omnilingual ASR (LLM 1B) for Tajik, Uzbek, Russian, English
-- [ ] Think: Muse Spark agent loop with tools
-- [ ] Remember: memory store with search and analysis
-- [ ] Speak: TTS with speech-ready text normalisation
+- [x] Think: Muse Spark agent loop with tools
+- [x] Remember: memory store with search and analysis
+- [x] Speak: TTS with speech-ready text normalisation
+- [x] See: explain a photo or text file with Muse Spark vision (server endpoint)
+- [x] Act: reminders the agent sets, mentions when due, and the app confirms
 - [ ] Modes: Home · Personal · Work · On the go
 - [ ] Demo video
 

@@ -6,6 +6,7 @@ from sado.domain.language import Language
 from sado.domain.mood import Mood
 from sado.domain.recording import Recording, Transcript
 from sado.domain.speech import LanguagePack
+from sado.domain.vision import Explanation, Paper
 from sado.domain.voice import Voice
 
 SADO_VOICE = Voice("sado", "Sado")
@@ -47,3 +48,14 @@ class EchoRecognizer:
 def fake_language_pack(language: Language) -> tuple[LanguagePack, RecordingSynthesizer]:
     synthesizer = RecordingSynthesizer()
     return LanguagePack(language, UppercaseNormalizer(), synthesizer, EchoRecognizer()), synthesizer
+
+
+@dataclass
+class CannedExplainer:
+    text: str = "This is a work permit notice."
+    seen: list[tuple[Paper, str]] = field(default_factory=list)
+    """Every (paper, instructions) pair this explainer was asked to read."""
+
+    def explain(self, paper: Paper, instructions: str) -> Explanation:
+        self.seen.append((paper, instructions))
+        return Explanation(text=self.text)

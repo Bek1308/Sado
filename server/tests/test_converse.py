@@ -64,4 +64,8 @@ def test_replies_endpoint_returns_sado_answer() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {"reply": "You said: салом", "remembered": []}
+    assert response.json() == {
+        "reply": "You said: салом",
+        "remembered": [],
+        "reminded": [],
+    }

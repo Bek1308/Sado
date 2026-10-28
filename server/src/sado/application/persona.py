@@ -1,6 +1,7 @@
 """Who Sado is. These instructions are the same whichever model does the thinking."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from sado.domain.language import Language
 
@@ -26,10 +27,24 @@ _MEMORY_INTRO = (
     "The user asked you to remember these facts. Use them when they help, and never invent others:"
 )
 
+_DUE_INTRO = "These reminders are now due. Mention them naturally when they fit the conversation:"
 
-def persona_instructions(language: Language, memories: Sequence[str] = ()) -> str:
-    instructions = f"{_PERSONA}\n{_LANGUAGE_RULES[language]}"
-    if not memories:
-        return instructions
-    facts = "\n".join(f"- {memory}" for memory in memories)
-    return f"{instructions}\n\n{_MEMORY_INTRO}\n{facts}"
+
+def persona_instructions(
+    language: Language,
+    memories: Sequence[str] = (),
+    due_reminders: Sequence[str] = (),
+    now: datetime | None = None,
+) -> str:
+    moment = now or datetime.now(UTC)
+    instructions = (
+        f"{_PERSONA}\n{_LANGUAGE_RULES[language]}\n"
+        f"The current time is {moment:%A, %d %B %Y at %H:%M} UTC."
+    )
+    if memories:
+        facts = "\n".join(f"- {memory}" for memory in memories)
+        instructions = f"{instructions}\n\n{_MEMORY_INTRO}\n{facts}"
+    if due_reminders:
+        due = "\n".join(f"- {reminder}" for reminder in due_reminders)
+        instructions = f"{instructions}\n\n{_DUE_INTRO}\n{due}"
+    return instructions

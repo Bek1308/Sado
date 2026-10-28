@@ -14,7 +14,8 @@ from sado.domain.conversation import (
     ToolResult,
     ToolStep,
 )
-from sado.domain.errors import ReasoningUnavailableError
+from sado.domain.errors import ReasoningUnavailableError, UnsupportedPaperError
+from sado.domain.vision import Explanation, Paper
 from sado.infrastructure.reasoning.muse_spark import MuseSparkReasoner
 
 _CONVERSATION = [
@@ -119,3 +120,75 @@ def test_reports_that_sado_cannot_think_when_the_api_fails(
 ) -> None:
     with pytest.raises(ReasoningUnavailableError):
         _reasoner(reply, [], status).respond("Be Sado.", _CONVERSATION, [], [])
+
+
+def test_explains_a_photographed_paper() -> None:
+    sent: list[dict[str, Any]] = []
+    reasoner = _reasoner(_message(content="This is a notice."), sent)
+    paper = Paper(data=b"paper", media_type="image/jpeg")
+
+    explanation = reasoner.explain(paper, "Be Sado.")
+
+    assert explanation == Explanation("This is a notice.")
+    request = sent[0]
+    assert request["model"] == "muse-spark-1.3"
+    system, user = request["messages"]
+    assert (system["role"], system["content"]) == ("system", "Be Sado.")
+    assert user["role"] == "user"
+    text, image = user["content"]
+    assert text == {"type": "text", "text": "What is this paper?"}
+    assert image == {
+        "type": "image_url",
+        "image_url": {"url": "data:image/jpeg;base64,cGFwZXI="},
+    }
+
+
+def test_explains_a_text_file() -> None:
+    sent: list[dict[str, Any]] = []
+    reasoner = _reasoner(_message(content="This is a notice."), sent)
+    paper = Paper(data=b"Permit 42 expires soon", media_type="text/plain")
+
+    explanation = reasoner.explain(paper, "Be Sado.")
+
+    assert explanation == Explanation("This is a notice.")
+    *_, user = sent[0]["messages"]
+    assert user["content"] == "What is this paper?\n\nPermit 42 expires soon"
+
+
+def test_reads_a_text_file_in_a_local_encoding() -> None:
+    sent: list[dict[str, Any]] = []
+    reasoner = _reasoner(_message(content="ok"), sent)
+    paper = Paper(data="Салом".encode("windows-1251"), media_type="text/plain")
+
+    reasoner.explain(paper, "Be Sado.")
+
+    *_, user = sent[0]["messages"]
+    assert user["content"].endswith("Салом")
+
+
+def test_keeps_the_head_and_tail_of_a_long_text_file() -> None:
+    sent: list[dict[str, Any]] = []
+    reasoner = _reasoner(_message(content="ok"), sent)
+    paper = Paper(data=b"x" * 5000 + b"y" * 20000, media_type="text/plain")
+
+    reasoner.explain(paper, "Be Sado.")
+
+    *_, user = sent[0]["messages"]
+    content = user["content"]
+    assert "[…]" in content
+    assert len(content) < len(paper.data)
+    assert content.endswith("y" * 6000)
+
+
+def test_rejects_a_file_type_sado_cannot_read() -> None:
+    paper = Paper(data=b"sound", media_type="audio/mpeg")
+
+    with pytest.raises(UnsupportedPaperError):
+        _reasoner(_message(content="ok"), []).explain(paper, "Be Sado.")
+
+
+def test_reports_that_sado_cannot_read_when_the_api_fails() -> None:
+    paper = Paper(data=b"paper", media_type="image/jpeg")
+
+    with pytest.raises(ReasoningUnavailableError):
+        _reasoner({"error": "down"}, [], 503).explain(paper, "Be Sado.")

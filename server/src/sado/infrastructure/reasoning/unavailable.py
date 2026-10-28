@@ -2,6 +2,7 @@ from collections.abc import Sequence
 
 from sado.domain.conversation import Message, ModelTurn, ToolSpec, ToolStep
 from sado.domain.errors import ReasoningUnavailableError
+from sado.domain.vision import Explanation, Paper
 
 
 class UnavailableReasoner:
@@ -14,4 +15,7 @@ class UnavailableReasoner:
         tools: Sequence[ToolSpec],
         steps: Sequence[ToolStep],
     ) -> ModelTurn:
+        raise ReasoningUnavailableError
+
+    def explain(self, paper: Paper, instructions: str) -> Explanation:
         raise ReasoningUnavailableError

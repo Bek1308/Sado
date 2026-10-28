@@ -1,5 +1,6 @@
 """Sado's thinking with Meta's Muse Spark, through the Model API's Chat Completions endpoint."""
 
+import base64
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,7 +18,8 @@ from sado.domain.conversation import (
     ToolSpec,
     ToolStep,
 )
-from sado.domain.errors import ReasoningUnavailableError
+from sado.domain.errors import ReasoningUnavailableError, UnsupportedPaperError
+from sado.domain.vision import Explanation, Paper, PaperKind, paper_kind
 
 MODEL_API_URL = "https://api.meta.ai/v1"
 
@@ -47,17 +49,72 @@ class MuseSparkReasoner:
         if tools:
             payload["tools"] = [_tool(spec) for spec in tools]
 
-        try:
-            response = self.http.post("/chat/completions", json=payload)
-            response.raise_for_status()
-            message = response.json()["choices"][0]["message"]
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as error:
-            raise ReasoningUnavailableError from error
-
+        message = self._complete(payload)
         calls = message.get("tool_calls") or []
         if calls:
             return ToolRequest(calls=tuple(_tool_call(call) for call in calls))
         return Answer(text=message.get("content") or "")
+
+    def explain(self, paper: Paper, instructions: str) -> Explanation:
+        message = self._complete(
+            {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": _user_content(paper)},
+                ],
+                "reasoning_effort": self.reasoning_effort,
+            }
+        )
+        return Explanation(text=message.get("content") or "")
+
+    def _complete(self, payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.http.post("/chat/completions", json=payload)
+            response.raise_for_status()
+            message: dict[str, Any] = response.json()["choices"][0]["message"]
+        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as error:
+            raise ReasoningUnavailableError from error
+        return message
+
+
+_TEXT_ENCODINGS = ("utf-8-sig", "windows-1251")
+_MAX_TEXT_CHARS = 12_000
+
+
+def _user_content(paper: Paper) -> str | list[dict[str, Any]]:
+    match paper_kind(paper.media_type):
+        case PaperKind.PHOTO:
+            image = base64.b64encode(paper.data).decode("ascii")
+            return [
+                {"type": "text", "text": "What is this paper?"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{paper.media_type};base64,{image}"},
+                },
+            ]
+        case PaperKind.TEXT:
+            return f"What is this paper?\n\n{_read_text(paper.data)}"
+        case None:
+            raise UnsupportedPaperError(paper.media_type)
+
+
+def _read_text(data: bytes) -> str:
+    for encoding in _TEXT_ENCODINGS:
+        try:
+            return _clip(data.decode(encoding))
+        except UnicodeDecodeError:
+            continue
+    raise UnsupportedPaperError("undecodable text")
+
+
+def _clip(text: str) -> str:
+    # Contracts hide key dates at the end, so a long file keeps its head
+    # and its tail instead of only its head.
+    if len(text) <= _MAX_TEXT_CHARS:
+        return text
+    half = _MAX_TEXT_CHARS // 2
+    return f"{text[:half]}\n[…]\n{text[-half:]}"
 
 
 def _messages(

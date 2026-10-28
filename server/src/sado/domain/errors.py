@@ -27,6 +27,19 @@ class EmptyRecordingError(SadoError):
         super().__init__("The recording contains no audio")
 
 
+class EmptyPaperError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("The upload contains no file")
+
+
+class UnsupportedPaperError(SadoError):
+    def __init__(self, media_type: str) -> None:
+        super().__init__(
+            f"Cannot explain '{media_type}'; send a photo (JPEG, PNG, WebP) or a text file"
+        )
+        self.media_type = media_type
+
+
 class SpeechRecognitionUnavailableError(SadoError):
     """The speech recognition service could not be reached or failed."""
 
@@ -54,3 +67,20 @@ class EmptyMemoryError(SadoError):
 class UnknownMemoryError(SadoError):
     def __init__(self, memory_id: str) -> None:
         super().__init__(f"No memory with id '{memory_id}'")
+
+
+class EmptyReminderError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("There is nothing to remind about")
+
+
+class InvalidReminderDueError(SadoError):
+    def __init__(self, due: str) -> None:
+        super().__init__(f"Cannot understand the due time '{due}'")
+        self.due = due
+
+
+class UnknownReminderError(SadoError):
+    def __init__(self, reminder_id: str) -> None:
+        super().__init__(f"No reminder with id '{reminder_id}'")
+        self.reminder_id = reminder_id

@@ -27,6 +27,7 @@ class ReplyRequest(BaseModel):
 class ReplyResponse(BaseModel):
     reply: str
     remembered: list[str]
+    reminded: list[str]
 
 
 @router.post("")
@@ -36,4 +37,8 @@ def reply(
 ) -> ReplyResponse:
     conversation = [Message(message.speaker, message.text) for message in request.messages]
     answer = converse.execute(conversation, request.language)
-    return ReplyResponse(reply=answer.text, remembered=list(answer.remembered))
+    return ReplyResponse(
+        reply=answer.text,
+        remembered=list(answer.remembered),
+        reminded=list(answer.reminded),
+    )
