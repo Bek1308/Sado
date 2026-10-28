@@ -8,20 +8,30 @@ from typing import cast
 from fastapi import FastAPI
 
 from sado.application.converse import Converse
+from sado.application.memories import Memories
 from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
 from sado.domain.language import Language
+from sado.domain.memory import MemoryStore
 from sado.domain.speech import LanguagePack
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
+from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 from sado.infrastructure.reasoning.unavailable import UnavailableReasoner
 from sado.infrastructure.settings import Settings, get_settings
 from sado.infrastructure.tts.mms import VitsVoiceSettings
 from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
 from sado.presentation.error_handlers import register_error_handlers
-from sado.presentation.routers import health, replies, speech, transcriptions, voices
+from sado.presentation.routers import (
+    health,
+    memories,
+    replies,
+    speech,
+    transcriptions,
+    voices,
+)
 
 
 def _voice_catalog(default_voice_id: str) -> VoiceCatalog:
@@ -64,6 +74,7 @@ def create_app(
     language_packs: Mapping[Language, LanguagePack] | None = None,
     voice_catalog: VoiceCatalog | None = None,
     reasoning_model: ReasoningModel | None = None,
+    memory_store: MemoryStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=settings.version)
@@ -73,7 +84,9 @@ def create_app(
     app.state.voice_catalog = catalog
     app.state.speak_text = SpeakText(packs, catalog)
     app.state.transcribe_speech = TranscribeSpeech(packs)
-    app.state.converse = Converse(reasoning_model or _default_reasoning_model())
+    saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))
+    app.state.memories = saved
+    app.state.converse = Converse(reasoning_model or _default_reasoning_model(), saved)
 
     register_error_handlers(app)
     app.include_router(health.router)
@@ -81,6 +94,7 @@ def create_app(
     app.include_router(transcriptions.router)
     app.include_router(replies.router)
     app.include_router(voices.router)
+    app.include_router(memories.router)
     return app
 
 

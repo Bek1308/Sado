@@ -44,3 +44,13 @@ class ReasoningUnavailableError(SadoError):
 class NothingToAnswerError(SadoError):
     def __init__(self) -> None:
         super().__init__("The conversation must end with a non-empty message from the user")
+
+
+class EmptyMemoryError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("There is nothing to remember")
+
+
+class UnknownMemoryError(SadoError):
+    def __init__(self, memory_id: str) -> None:
+        super().__init__(f"No memory with id '{memory_id}'")

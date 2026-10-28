@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0
 
+    memory_db_path: str = "data/memory.sqlite3"
+
     asr_url: str = "http://localhost:8011"
     asr_timeout_seconds: float = 60.0
 

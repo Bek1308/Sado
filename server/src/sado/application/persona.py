@@ -1,5 +1,7 @@
 """Who Sado is. These instructions are the same whichever model does the thinking."""
 
+from collections.abc import Sequence
+
 from sado.domain.language import Language
 
 _LANGUAGE_RULES = {
@@ -20,5 +22,14 @@ Everything you write is read aloud by a speech engine, so:
 """
 
 
-def persona_instructions(language: Language) -> str:
-    return f"{_PERSONA}\n{_LANGUAGE_RULES[language]}"
+_MEMORY_INTRO = (
+    "The user asked you to remember these facts. Use them when they help, and never invent others:"
+)
+
+
+def persona_instructions(language: Language, memories: Sequence[str] = ()) -> str:
+    instructions = f"{_PERSONA}\n{_LANGUAGE_RULES[language]}"
+    if not memories:
+        return instructions
+    facts = "\n".join(f"- {memory}" for memory in memories)
+    return f"{instructions}\n\n{_MEMORY_INTRO}\n{facts}"
