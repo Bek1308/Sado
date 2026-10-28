@@ -36,7 +36,7 @@ Sado is not a chatbot with a microphone. It is a **character** — the same warm
 | 🗣️ **Speaks like you do** | Understands Tajik, Uzbek and Russian — and the way people mix them mid-sentence. |
 | 🧠 **Remembers** | Names, routines, promises, documents you showed it last week. You can see and delete every memory. |
 | 👀 **Sees** | Point your camera at a letter, a bill or a form. Sado reads it, explains it, and tells you what to do next. |
-| 🛠️ **Acts** | Sets reminders, drafts messages, searches, fills in forms, keeps lists — through real tool calls, not just words. |
+| 🛠️ **Acts** | Saves facts and sets reminders through real tool calls, and asks before anything changes. |
 | 🎭 **Has a personality** | Consistent voice, humour and manners. Polite with elders, quick with students, precise at work. |
 
 ---
@@ -46,10 +46,10 @@ Sado is not a chatbot with a microphone. It is a **character** — the same warm
 Sado runs on one brain and one memory, and switches **modes** to fit where you are.
 
 ### 🏠 At home — *the family companion*
-> **Grandma:** *"Sado, what did Rustam say about coming home?"*
-> **Sado:** *"He wrote yesterday — he lands on Friday at 6. Want me to remind you Thursday evening?"*
+> **Grandma:** *"Sado, Rustam lands on Friday at 6. Remind me on Thursday evening."*
+> **Sado:** *"Of course. I'll remind you on Thursday at 7 in the evening."*
 
-Hands-free reminders, family messages read aloud, gentle daily routines.
+Hands-free talk: speak, pause, and Sado answers and listens again. No buttons, no typing.
 
 ### 🙋 For you — *the personal assistant*
 > **You:** *"Sado, remember my car insurance ends in March — and tell me two weeks before."*
@@ -57,9 +57,9 @@ Hands-free reminders, family messages read aloud, gentle daily routines.
 Notes, plans, reminders and personal knowledge — searchable by voice.
 
 ### 💼 At work — *the agent*
-> **You:** *"Read these three invoices, compare them, and draft a reply to the cheapest supplier."*
+> **You** *(shares a contract PDF)*: *"What do I have to pay, and by when?"*
 
-Multi-step tasks: read documents, extract data, compare, write, and save the result.
+Brief, professional answers: Sado reads PDFs and Office files and pulls out the names, dates and amounts that matter.
 
 ### 🧭 On the go — *the explainer*
 > **Migrant worker** *(photographs a Russian document)*: *"What is this?"*
@@ -73,40 +73,40 @@ Camera-first: understand any paper, in any language, in seconds.
 
 ```mermaid
 flowchart LR
-    U([🎤 Voice / 📷 Camera]) --> STT
+    U([🎤 Voice · 📷 Camera · 📄 File]) --> STT
     subgraph Hear
-      STT[Speech-to-text<br/>Muse Voice Transcribe<br/>+ Omnilingual ASR]
+      STT[Speech-to-text<br/>Meta Omnilingual ASR<br/>language detected automatically]
     end
     STT --> B
     subgraph Think
-      B[🧠 Sado Agent<br/>Muse Spark / Muse Wonder]
-      B <--> M[(Memory<br/>save · search · analyse)]
-      B <--> T[🛠️ Tools<br/>reminders · messages · documents · search]
+      B[🧠 Sado agent<br/>Meta Muse Spark 1.3]
+      B <--> M[(Memory<br/>SQLite full-text search)]
+      B <--> T[🛠️ Tools<br/>remember · remind]
     end
     B --> TTS
     subgraph Speak
-      TTS[Text-to-speech<br/>Meta MMS-TTS + voice design]
+      TTS[Speech-ready text<br/>→ OmniVoice designed voices<br/>→ Meta MMS-TTS fallback]
     end
     TTS --> O([🔊 Sado's voice])
 ```
 
-1. **Hear** — The right speech model is picked per language. Supported languages use Muse Voice Transcribe in real time. Tajik and Uzbek use Meta's open-source Omnilingual ASR.
-2. **Think** — Muse Spark plans, reasons over images and calls tools. Long-running tasks use Muse Wonder's memory and focus.
-3. **Remember** — Every fact Sado learns is stored, searchable and analysable — and fully visible to the user.
-4. **Speak** — Answers are normalised for speech (numbers, dates, money become words) and spoken in Sado's own voice.
+1. **Hear** — Meta's open-source **Omnilingual ASR** (LLM 1B) transcribes Tajik, Uzbek, Russian and English. Sado works out which language you spoke, so there is no language picker.
+2. **Think** — **Muse Spark** answers as Sado, in a mode that fits the moment (Home, Personal, Work, On the go). It calls tools to save facts and set reminders, and reads photos, PDFs, Office files and recordings.
+3. **Remember** — Facts are stored locally and recalled with full-text search tuned for Tajik and Uzbek word endings. The app shows every memory and lets you delete it.
+4. **Speak** — Numbers, dates and money are written out the way each language says them, then spoken in one of six designed voices, in the mood you choose.
 
 ---
 
-## 🧩 Meta AI inside
+## 🧩 What runs where
 
-| Meta model | Role in Sado |
-|---|---|
-| **Muse Spark** | The brain: multimodal reasoning, tool use, document understanding |
-| **Muse Wonder** | Long, multi-step agent tasks with active memory |
-| **Muse Voice Transcribe** | Real-time listening for supported languages |
-| **Omnilingual ASR** *(Meta FAIR, open source)* | Listening in Tajik, Uzbek and other low-resource languages |
-| **MMS-TTS** *(Meta, open source)* | Sado's voice in languages no API speaks yet |
-| **Muse Image** | Sado's look and visual answers |
+| Model | Role in Sado | By |
+|---|---|---|
+| **Muse Spark 1.3** (Model API) | The brain: conversation, tool calls, reading photos and documents | Meta |
+| **Omnilingual ASR** LLM 1B | Listening in all four languages | Meta FAIR, open source |
+| **MMS-TTS** | Fallback voice when the main voice is unavailable | Meta, open source |
+| **OmniVoice** | Sado's main voice: designed voices and moods | k2-fsa, open source (Apache-2.0) |
+
+Meta's hosted speech model, Muse Voice Transcribe, does not cover Tajik, Uzbek or Russian, and the Model API has no text-to-speech — which is exactly why Sado brings open speech models alongside Muse Spark.
 
 ---
 
@@ -114,10 +114,10 @@ flowchart LR
 
 | Language | Listen | Speak | Status |
 |---|:-:|:-:|---|
-| Tajik | ✅ | ✅ | Planned for first release |
-| Uzbek | ✅ | ✅ | Planned for first release |
-| Russian | ✅ | ✅ | Planned for first release |
-| English | ✅ | ✅ | Planned for first release |
+| Tajik | ✅ | ✅ | Working |
+| Uzbek (Latin) | ✅ | ✅ | Working |
+| Russian | ✅ | ✅ | Working |
+| English | ✅ | ✅ | Working |
 | Any of 1,600+ Omnilingual languages | 🔜 | 🔜 | Pluggable language packs |
 
 Adding a language means adding a **language pack** — speech models, voice and normalisation rules — not rewriting Sado.
@@ -127,29 +127,57 @@ Adding a language means adding a **language pack** — speech models, voice and 
 ## 🔒 Trust by design
 
 - **You own the memory.** View, edit or delete anything Sado remembers.
-- **Ask before acting.** Sado confirms before sending a message or changing anything.
+- **Ask before acting.** Reminders Sado sets show up in the app for you to confirm.
 - **Knows its limits.** No medical, legal or financial advice — Sado explains documents and points you to real help.
+
+---
+
+## 🚀 Run it yourself
+
+**Server** (Python 3.12, [uv](https://docs.astral.sh/uv/), an NVIDIA GPU for the voices):
+
+```bash
+cd server
+cp .env.example .env            # then set SADO_META_API_KEY from dev.meta.ai
+uv sync --extra speech
+uv run uvicorn sado.main:app --port 8000
+```
+
+**Speech recognition worker** (Linux or WSL, because fairseq2 has no Windows build):
+
+```bash
+bash server/scripts/download_models.sh
+cd server/workers && ~/.venvs/sado-models/bin/python -m uvicorn omnilingual_asr_worker:app --port 8011
+```
+
+**App** (Flutter 3.44):
+
+```bash
+cd mobile
+flutter run --dart-define=SADO_API_URL=http://<your-server>:8000
+```
+
+Checks: `uv run pytest` and `uv run mypy src` in `server/`, `flutter test` and `dart analyze` in `mobile/`.
 
 ---
 
 ## 🚧 Build log
 
-Sado is being built live during the hackathon. All code in this repository was written from **27 October 2026**.
+Sado is being built live during the hackathon. All code in this repository was written from **27 October 2026**, partly with Meta's own coding agent, **Muse Code**.
 
-📐 [Engineering principles](docs/ENGINEERING.md) · 🗺️ [Roadmap](docs/ROADMAP.md)
+📐 [Engineering principles](docs/ENGINEERING.md) · 🗺️ [Roadmap](docs/ROADMAP.md) · 🤖 [Agent guide](AGENTS.md)
 
 - [x] Foundations: server and mobile skeletons, Clean Architecture, CI
-- [x] Flutter app: voice button and camera
-- [x] Sado's face: robot with visor eyes, antenna lamp and equalizer mouth
-- [x] Hear: speech-to-text with Meta Omnilingual ASR (LLM 1B) for Tajik, Uzbek, Russian, English
+- [x] Speak: six designed voices, six moods, speech-ready text in four languages
+- [x] Hear: Meta Omnilingual ASR for Tajik, Uzbek, Russian and English, language detected automatically
+- [x] Think: Muse Spark agent loop with tools, on the user's own clock
+- [x] Remember: memories saved by voice or by hand, recalled when relevant, visible and deletable
+- [x] See: explain photos, PDFs, Office files and recordings
+- [x] Act: reminders the agent sets and mentions when due
+- [x] Character: animated robot face that follows mood and activity
+- [x] Modes: Home · Personal · Work · On the go
 - [x] Live talk: hands-free conversation, silence ends the turn
-- [x] Auto language: detected from speech, no manual picker
-- [x] Think: Muse Spark agent loop with tools
-- [x] Remember: memory store with search and analysis
-- [x] Speak: TTS with speech-ready text normalisation
-- [x] See: explain a photo or text file with Muse Spark vision (server endpoint)
-- [x] Act: reminders the agent sets, mentions when due, and the app confirms
-- [x] Modes: Home · Personal · Work · On the go (persona presets + app switcher)
+- [ ] Hosted backend for judges
 - [ ] Demo video
 
 ---
