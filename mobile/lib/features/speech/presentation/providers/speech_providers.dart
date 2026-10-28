@@ -8,6 +8,8 @@ import 'package:sado/features/speech/domain/entities/mood.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/domain/repositories/speech_repository.dart';
 import 'package:sado/features/speech/domain/usecases/speak_text.dart';
+import 'package:sado/features/speech/presentation/providers/speech_settings_providers.dart';
+import 'package:sado/features/voices/presentation/providers/voice_providers.dart';
 
 final speechRepositoryProvider = Provider<SpeechRepository>(
   (ref) => SpeechRepositoryImpl(
@@ -50,4 +52,12 @@ class SpeakController extends AsyncNotifier<void> {
       Err(:final failure) => AsyncError(failure, StackTrace.current),
     };
   }
+
+  /// Speaks [text] in the language, voice and mood the user has chosen.
+  Future<void> say(String text) => speak(
+    text,
+    ref.read(spokenLanguageProvider),
+    voiceId: ref.read(selectedVoiceIdProvider),
+    mood: ref.read(moodProvider),
+  );
 }

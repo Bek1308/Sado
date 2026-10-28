@@ -9,9 +9,18 @@ import 'package:sado/features/server_status/presentation/providers/server_status
 import 'package:sado/features/voices/domain/entities/voice_option.dart';
 import 'package:sado/features/voices/presentation/providers/voice_providers.dart';
 
+const Result<ServerStatus> _online = Ok(
+  ServerStatus(name: 'Sado', version: '0.1.0'),
+);
+
 const _voices = [
   VoiceOption(id: 'sado', name: 'Sado', isDefault: true),
-  VoiceOption(id: 'opa', name: 'Opa', isDefault: false),
+  VoiceOption(
+    id: 'opa',
+    name: 'Opa',
+    description: 'Warm and bright',
+    isDefault: false,
+  ),
 ];
 
 Future<void> _pumpHomePage(
@@ -30,44 +39,57 @@ Future<void> _pumpHomePage(
   await tester.pumpAndSettle();
 }
 
-ChoiceChip _chip(WidgetTester tester, String name) =>
-    tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, name));
+ListTile _voice(WidgetTester tester, String name) =>
+    tester.widget<ListTile>(find.widgetWithText(ListTile, name));
 
 void main() {
-  testWidgets('shows the server version when connected', (tester) async {
-    await _pumpHomePage(
-      tester,
-      const Ok(ServerStatus(name: 'Sado', version: '0.1.0')),
-    );
+  testWidgets('welcomes the user and shows that Sado is online', (
+    tester,
+  ) async {
+    await _pumpHomePage(tester, _online);
 
     expect(find.text('One voice. Every language.'), findsOneWidget);
-    expect(find.text('Connected · v0.1.0'), findsOneWidget);
+    expect(find.text('Online'), findsOneWidget);
+    expect(find.byTooltip('Talk to Sado'), findsOneWidget);
   });
 
-  testWidgets('shows the failure message when offline', (tester) async {
+  testWidgets('explains the problem and offers a retry when offline', (
+    tester,
+  ) async {
     await _pumpHomePage(
       tester,
       const Err(NetworkFailure('Server is unreachable')),
     );
 
+    expect(find.text('Offline'), findsOneWidget);
     expect(find.text('Server is unreachable'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
   });
 
-  testWidgets('preselects the default voice and lets the user switch', (
-    tester,
-  ) async {
-    await _pumpHomePage(
-      tester,
-      const Ok(ServerStatus(name: 'Sado', version: '0.1.0')),
-    );
+  testWidgets('swaps the mic for send once there is text', (tester) async {
+    await _pumpHomePage(tester, _online);
 
-    expect(_chip(tester, 'Sado').selected, isTrue);
-    expect(_chip(tester, 'Opa').selected, isFalse);
-
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Opa'));
+    await tester.enterText(find.byType(TextField), 'Salom');
     await tester.pump();
 
-    expect(_chip(tester, 'Opa').selected, isTrue);
-    expect(_chip(tester, 'Sado').selected, isFalse);
+    expect(find.byTooltip('Send'), findsOneWidget);
+    expect(find.byTooltip('Talk to Sado'), findsNothing);
+  });
+
+  testWidgets('lets the user pick a voice in the style sheet', (tester) async {
+    await _pumpHomePage(tester, _online);
+
+    await tester.tap(find.byTooltip('Voice & style'));
+    await tester.pumpAndSettle();
+
+    expect(_voice(tester, 'Sado').selected, isTrue);
+    expect(_voice(tester, 'Opa').selected, isFalse);
+    expect(find.text('Warm and bright'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ListTile, 'Opa'));
+    await tester.pump();
+
+    expect(_voice(tester, 'Opa').selected, isTrue);
+    expect(_voice(tester, 'Sado').selected, isFalse);
   });
 }

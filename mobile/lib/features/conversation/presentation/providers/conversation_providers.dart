@@ -70,4 +70,6 @@ class ConversationController extends Notifier<ConversationState> {
         return null;
     }
   }
+
+  void startOver() => state = const ConversationState();
 }

@@ -30,6 +30,7 @@ void main() {
         VoiceOptionDto.fromJson(const {
           'id': 'opa',
           'name': 'Opa',
+          'description': 'Warm and bright',
           'is_default': false,
         }),
       ],
@@ -40,9 +41,12 @@ void main() {
     expect(
       result,
       isA<Ok<List<VoiceOption>>>().having(
-        (ok) => [for (final voice in ok.value) (voice.id, voice.isDefault)],
+        (ok) => [
+          for (final voice in ok.value)
+            (voice.id, voice.description, voice.isDefault),
+        ],
         'voices',
-        [('sado', true), ('opa', false)],
+        [('sado', '', true), ('opa', 'Warm and bright', false)],
       ),
     );
   });
