@@ -4,8 +4,10 @@ import 'package:sado/core/network/http_client.dart';
 import 'package:sado/features/conversation/data/datasources/conversation_remote_data_source.dart';
 import 'package:sado/features/conversation/data/repositories/conversation_repository_impl.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/domain/repositories/conversation_repository.dart';
 import 'package:sado/features/conversation/domain/usecases/ask_sado.dart';
+import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 final conversationRepositoryProvider = Provider<ConversationRepository>(
@@ -44,7 +46,7 @@ class ConversationController extends Notifier<ConversationState> {
 
   /// Sends [text] to Sado and returns the reply, or `null` when Sado could
   /// not answer.
-  Future<String?> ask(String text, SpokenLanguage language) async {
+  Future<SadoReply?> ask(String text, SpokenLanguage language) async {
     final messages = [
       ...state.messages,
       ChatMessage(speaker: ChatSpeaker.user, text: text),
@@ -61,9 +63,12 @@ class ConversationController extends Notifier<ConversationState> {
         state = ConversationState(
           messages: [
             ...messages,
-            ChatMessage(speaker: ChatSpeaker.sado, text: value),
+            ChatMessage(speaker: ChatSpeaker.sado, text: value.text),
           ],
         );
+        if (value.remembered.isNotEmpty) {
+          ref.invalidate(memoriesControllerProvider);
+        }
         return value;
       case Err(:final failure):
         state = ConversationState(messages: messages, error: failure.message);

@@ -35,9 +35,17 @@ class _ComposerState extends ConsumerState<Composer> {
     final reply = await ref
         .read(conversationControllerProvider.notifier)
         .ask(question, ref.read(spokenLanguageProvider));
-    if (reply != null && mounted) {
-      await ref.read(speakControllerProvider.notifier).say(reply);
+    if (reply == null || !mounted) return;
+    if (reply.remembered.isNotEmpty) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Saved to memories: ${reply.remembered.join(' · ')}'),
+          ),
+        );
     }
+    await ref.read(speakControllerProvider.notifier).say(reply.text);
   }
 
   @override

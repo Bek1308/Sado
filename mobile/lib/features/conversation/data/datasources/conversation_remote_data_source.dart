@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 class ConversationRemoteDataSource {
@@ -9,7 +10,7 @@ class ConversationRemoteDataSource {
 
   final Dio _httpClient;
 
-  Future<String> reply(
+  Future<SadoReply> reply(
     List<ChatMessage> conversation,
     SpokenLanguage language,
   ) async {
@@ -23,6 +24,14 @@ class ConversationRemoteDataSource {
         ],
       },
     );
-    return response.data!['reply'] as String;
+    final data = response.data!;
+    return SadoReply(
+      text: data['reply'] as String,
+      // Older servers did not report what Sado remembered.
+      remembered: [
+        for (final fact in data['remembered'] as List<dynamic>? ?? const [])
+          fact as String,
+      ],
+    );
   }
 }
