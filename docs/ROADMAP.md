@@ -4,8 +4,19 @@ Build window: **27 Oct – 4 Nov 2026**. Submission deadline: **4 Nov, 9:00 PM E
 
 Each phase ends with something that runs end to end. If time runs short, later phases shrink — earlier ones are never left half-done.
 
-| # | Phase | Dates | Done when |
-|---|---|---|---|
+| # | Phase | Dates | Done when | Status |
+|---|---|---|---|---|
+| 0 | Foundations | 27 Oct | Server and mobile skeletons build, lint and test in CI | ✅ 27 Oct |
+| 1 | Speak | 28 Oct | The app speaks a typed sentence in Tajik, Uzbek, Russian and English | ✅ 27 Oct |
+| 2 | Hear | 28–29 Oct | The app transcribes speech in all four languages | ✅ 28 Oct |
+| 3 | Think | 29–30 Oct | Voice in → Muse Spark reasons as Sado → voice out | ✅ 28 Oct |
+| 4 | Remember | 31 Oct | Sado saves, searches and recalls facts; the user can view and delete them | ✅ 28 Oct |
+| 5 | See & Act | 1 Nov | Sado explains a photographed document and performs confirmed actions | ✅ 28 Oct |
+| 6 | Character & Modes | 2 Nov | Sado's voice, face and personality; Home, Personal, Work and On-the-go modes | ✅ 29 Oct |
+| 7 | Ship | 3 Nov | Deployed backend, hardened errors, updated README | ⏳ |
+| 8 | Demo | 4 Nov | Three-minute video, submission, post on X | ⏳ |
+
+---|---|---|---|
 | 0 | Foundations | 27 Oct | Server and mobile skeletons build, lint and test in CI |
 | 1 | Speak | 28 Oct | The app speaks a typed sentence in Tajik, Uzbek, Russian and English |
 | 2 | Hear | 28–29 Oct | The app transcribes speech in all four languages |
