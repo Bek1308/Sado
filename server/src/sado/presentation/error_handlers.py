@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from sado.domain.errors import (
     EmptyRecordingError,
     EmptyTextError,
+    NothingToAnswerError,
+    ReasoningUnavailableError,
     SadoError,
     SpeechRecognitionUnavailableError,
     UnknownVoiceError,
@@ -16,6 +18,8 @@ _STATUS_BY_ERROR: dict[type[SadoError], int] = {
     UnknownVoiceError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     EmptyRecordingError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     SpeechRecognitionUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
+    NothingToAnswerError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ReasoningUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

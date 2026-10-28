@@ -32,3 +32,15 @@ class SpeechRecognitionUnavailableError(SadoError):
 
     def __init__(self) -> None:
         super().__init__("Speech recognition is temporarily unavailable")
+
+
+class ReasoningUnavailableError(SadoError):
+    """The reasoning model could not be reached or failed to answer."""
+
+    def __init__(self) -> None:
+        super().__init__("Sado cannot think right now; please try again")
+
+
+class NothingToAnswerError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("The conversation must end with a non-empty message from the user")
