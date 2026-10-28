@@ -25,6 +25,11 @@ final class ImagePickerPhotoPicker implements PhotoPicker {
   Future<Photograph?> takePhoto() async {
     final photo = await ImagePicker().pickImage(
       source: ImageSource.camera,
+      // Enough to read small print, small enough to upload quickly over
+      // mobile data.
+      maxWidth: 2048,
+      maxHeight: 2048,
+      imageQuality: 85,
     );
     if (photo == null) return null;
     return Photograph(

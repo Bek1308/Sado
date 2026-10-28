@@ -25,9 +25,12 @@ final class AudioplayersOutput implements AudioOutput {
     await _player.stop();
     final signal = Completer<void>();
     _stopSignal = signal;
+    // Listen before playing: a very short clip can finish before play()
+    // returns.
+    final finished = _player.onPlayerComplete.first;
     try {
       await _player.play(BytesSource(wavBytes, mimeType: 'audio/wav'));
-      await Future.any([_player.onPlayerComplete.first, signal.future]);
+      await Future.any([finished, signal.future]);
     } finally {
       if (identical(_stopSignal, signal)) _stopSignal = null;
     }

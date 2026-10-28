@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sado/core/audio/audioplayers_output.dart';
 import 'package:sado/core/audio/record_voice_recorder.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_settings_providers.dart';
@@ -37,7 +36,11 @@ class LiveConversationController extends Notifier<LiveState> {
   /// The speech worker caps utterances at 40 seconds.
   static const _maxTurn = Duration(seconds: 38);
 
-  bool _running = false;
+  /// Every start and stop opens a new session. Each step of a turn checks it
+  /// still belongs to the current one after every wait, so a turn that
+  /// outlives a Stop or a quick restart quietly ends instead of racing.
+  int _session = 0;
+
   // Released through _cancelWatchers when a turn ends or the user stops.
   // ignore: cancel_subscriptions
   StreamSubscription<double>? _levels;
@@ -53,50 +56,68 @@ class LiveConversationController extends Notifier<LiveState> {
   Future<void> toggle() => state.isLive ? stop() : start();
 
   Future<void> start() async {
-    if (_running) return;
-    _running = true;
-    await _beginTurn();
+    if (state.isLive) return;
+    final session = ++_session;
+    await _beginTurn(session);
   }
 
   Future<void> stop() async {
-    _running = false;
+    _session++;
     _cancelWatchers();
-    await ref.read(voiceRecorderProvider).stop();
-    await ref.read(audioOutputProvider).stop();
     state = const LiveState();
+    await ref.read(listeningControllerProvider.notifier).cancel();
+    await ref.read(speakControllerProvider.notifier).stop();
   }
 
-  Future<void> _beginTurn() async {
-    if (!_running) return;
+  bool _isStale(int session) => session != _session;
+
+  Future<void> _beginTurn(int session) async {
+    if (_isStale(session)) return;
     state = const LiveState(phase: LivePhase.listening);
-    await ref.read(listeningControllerProvider.notifier).start();
-    if (!_running) return;
+    final listening = ref.read(listeningControllerProvider.notifier);
+    await listening.start();
+    if (_isStale(session)) {
+      // Stop arrived while the microphone was opening; close it again.
+      await listening.cancel();
+      return;
+    }
     if (ref.read(listeningControllerProvider) is ListeningFailed) {
-      return _fail('Microphone access was denied');
+      return _fail(session, 'Microphone access was denied');
     }
     var heardSpeech = false;
     _levels = ref.read(voiceRecorderProvider).levels.listen((level) {
-      if (!_running) return;
+      if (_isStale(session)) return;
       if (level >= _speechThresholdDb) {
         heardSpeech = true;
         _silenceTimer?.cancel();
         _silenceTimer = null;
       } else if (heardSpeech && _silenceTimer == null) {
-        _silenceTimer = Timer(_silenceTimeout, _finishTurn);
+        _silenceTimer = Timer(_silenceTimeout, () => _finishTurn(session));
       }
     });
-    _maxTimer = Timer(_maxTurn, _finishTurn);
+    _maxTimer = Timer(
+      _maxTurn,
+      () => heardSpeech ? _finishTurn(session) : _listenAgain(session),
+    );
   }
 
-  Future<void> _finishTurn() async {
+  /// Nobody spoke for a whole turn: drop the silence instead of uploading it.
+  Future<void> _listenAgain(int session) async {
+    if (_isStale(session)) return;
     _cancelWatchers();
-    if (!_running) return;
+    await ref.read(listeningControllerProvider.notifier).cancel();
+    await _beginTurn(session);
+  }
+
+  Future<void> _finishTurn(int session) async {
+    if (_isStale(session)) return;
+    _cancelWatchers();
     state = const LiveState(phase: LivePhase.thinking);
     await ref.read(listeningControllerProvider.notifier).stop();
-    if (!_running) return;
+    if (_isStale(session)) return;
     switch (ref.read(listeningControllerProvider)) {
       case ListeningHeard(:final text) when text.trim().isEmpty:
-        return _beginTurn();
+        return _beginTurn(session);
       case ListeningHeard(:final text):
         final reply = await ref
             .read(conversationControllerProvider.notifier)
@@ -105,23 +126,27 @@ class LiveConversationController extends Notifier<LiveState> {
               ref.read(spokenLanguageProvider),
               ref.read(sadoModeProvider),
             );
-        if (!_running) return;
-        if (reply == null) return _fail('Sado could not answer');
+        if (_isStale(session)) return;
+        if (reply == null) {
+          final why = ref.read(conversationControllerProvider).error;
+          return _fail(session, why ?? 'Sado could not answer');
+        }
         state = const LiveState(phase: LivePhase.speaking);
         await ref.read(speakControllerProvider.notifier).say(reply.text);
-        if (!_running) return;
-        return _beginTurn();
+        if (_isStale(session)) return;
+        return _beginTurn(session);
       case ListeningFailed(:final message):
-        return _fail(message);
+        return _fail(session, message);
       case ListeningIdle():
-        return _beginTurn();
+        return _beginTurn(session);
       default:
-        return _fail('Sado heard nothing');
+        return _fail(session, 'Sado heard nothing');
     }
   }
 
-  void _fail(String message) {
-    _running = false;
+  void _fail(int session, String message) {
+    if (_isStale(session)) return;
+    _session++;
     _cancelWatchers();
     state = LiveState(error: message);
   }

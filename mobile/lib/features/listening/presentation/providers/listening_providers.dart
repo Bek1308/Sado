@@ -64,6 +64,12 @@ class ListeningController extends Notifier<ListeningState> {
         : const ListeningFailed('Microphone access was denied');
   }
 
+  /// Turns the microphone off and throws the recording away unheard.
+  Future<void> cancel() async {
+    await ref.read(voiceRecorderProvider).stop();
+    state = const ListeningIdle();
+  }
+
   Future<void> stop() async {
     final recording = await ref.read(voiceRecorderProvider).stop();
     if (recording == null) {

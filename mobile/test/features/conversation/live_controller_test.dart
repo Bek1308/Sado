@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,13 +27,22 @@ const _recording = RecordedAudio(path: '/tmp/a.m4a', mimeType: 'audio/mp4');
 
 final class _FakeRecorder implements VoiceRecorder {
   int stopCalls = 0;
+  bool recording = false;
+
+  /// When set, opening the microphone waits for it, like a permission prompt.
+  Completer<void>? startGate;
 
   @override
-  Future<bool> start() async => true;
+  Future<bool> start() async {
+    await startGate?.future;
+    recording = true;
+    return true;
+  }
 
   @override
   Future<RecordedAudio?> stop() async {
     stopCalls++;
+    recording = false;
     return _recording;
   }
 
@@ -54,6 +64,9 @@ final class _FakeTranscriptions implements TranscriptionRepository {
 final class _FakeConversation implements ConversationRepository {
   int asked = 0;
 
+  /// When set, the first answer waits for it, like a slow model.
+  Completer<void>? firstAnswerGate;
+
   @override
   Future<Result<SadoReply>> reply(
     List<ChatMessage> conversation,
@@ -61,6 +74,7 @@ final class _FakeConversation implements ConversationRepository {
     SadoMode mode,
   ) async {
     asked++;
+    if (asked == 1) await firstAnswerGate?.future;
     return const Ok(SadoReply(text: 'Salom!'));
   }
 }
@@ -82,9 +96,12 @@ final class _FakeSpeech implements SpeechRepository {
 
 final class _FakeAudio implements AudioOutput {
   int stopCalls = 0;
+  int played = 0;
 
   @override
-  Future<void> playWav(Uint8List wavBytes) async {}
+  Future<void> playWav(Uint8List wavBytes) async {
+    played++;
+  }
 
   @override
   Future<void> stop() async {
@@ -96,6 +113,7 @@ ProviderContainer _container({
   required _FakeConversation conversation,
   required _FakeSpeech speech,
   required _FakeAudio audio,
+  _FakeRecorder? recorder,
   Result<Transcription> heard = const Ok((
     text: 'salom',
     language: SpokenLanguage.uzbek,
@@ -103,7 +121,7 @@ ProviderContainer _container({
 }) {
   final container = ProviderContainer(
     overrides: [
-      voiceRecorderProvider.overrideWithValue(_FakeRecorder()),
+      voiceRecorderProvider.overrideWithValue(recorder ?? _FakeRecorder()),
       transcriptionRepositoryProvider.overrideWithValue(
         _FakeTranscriptions(heard),
       ),
@@ -166,5 +184,74 @@ void main() {
       container.read(liveConversationProvider).phase,
       LivePhase.listening,
     );
+  });
+
+  test('a reply that arrives after Stop is not spoken', () async {
+    final conversation = _FakeConversation()..firstAnswerGate = Completer();
+    final audio = _FakeAudio();
+    final container = _container(
+      conversation: conversation,
+      speech: _FakeSpeech(),
+      audio: audio,
+    );
+    final controller = container.read(liveConversationProvider.notifier);
+
+    await controller.start();
+    await Future<void>.delayed(const Duration(seconds: 2));
+    expect(
+      container.read(liveConversationProvider).phase,
+      LivePhase.thinking,
+    );
+
+    await controller.stop();
+    conversation.firstAnswerGate!.complete();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    expect(audio.played, 0);
+    expect(container.read(liveConversationProvider).isLive, isFalse);
+  });
+
+  test('restarting while an old turn waits runs a single loop', () async {
+    final conversation = _FakeConversation()..firstAnswerGate = Completer();
+    final audio = _FakeAudio();
+    final container = _container(
+      conversation: conversation,
+      speech: _FakeSpeech(),
+      audio: audio,
+    );
+    final controller = container.read(liveConversationProvider.notifier);
+
+    await controller.start();
+    await Future<void>.delayed(const Duration(seconds: 2));
+    await controller.stop();
+    await controller.start();
+    conversation.firstAnswerGate!.complete();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    // The old turn's answer is dropped; the new turn is still listening.
+    expect(audio.played, 0);
+    expect(
+      container.read(liveConversationProvider).phase,
+      LivePhase.listening,
+    );
+  });
+
+  test('Stop while the microphone is opening closes it again', () async {
+    final recorder = _FakeRecorder()..startGate = Completer();
+    final container = _container(
+      conversation: _FakeConversation(),
+      speech: _FakeSpeech(),
+      audio: _FakeAudio(),
+      recorder: recorder,
+    );
+    final controller = container.read(liveConversationProvider.notifier);
+
+    final starting = controller.start();
+    await controller.stop();
+    recorder.startGate!.complete();
+    await starting;
+
+    expect(recorder.recording, isFalse);
+    expect(container.read(liveConversationProvider).isLive, isFalse);
   });
 }

@@ -87,7 +87,8 @@ class _ComposerState extends ConsumerState<Composer> {
       conversationControllerProvider.select((state) => state.isThinking),
     );
     final voicing = ref.watch(speakControllerProvider).isLoading;
-    final hint = switch (ref.watch(liveConversationProvider).phase) {
+    final live = ref.watch(liveConversationProvider);
+    final hint = switch (live.phase) {
       LivePhase.listening => 'Listening…',
       LivePhase.thinking => 'Thinking…',
       LivePhase.speaking => 'Speaking…',
@@ -145,7 +146,8 @@ class _ComposerState extends ConsumerState<Composer> {
                     ),
                   ),
                   CameraButton(onExplained: _showExplanation),
-                  if (hasText)
+                  // While live, the mic button is the only way to stop it.
+                  if (hasText && !live.isLive)
                     SizedBox.square(
                       dimension: MicButton.size,
                       child: IconButton.filled(
