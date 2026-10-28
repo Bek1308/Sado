@@ -16,17 +16,6 @@ Each phase ends with something that runs end to end. If time runs short, later p
 | 7 | Ship | 3 Nov | Deployed backend, hardened errors, updated README | ⏳ |
 | 8 | Demo | 4 Nov | Three-minute video, submission, post on X | ⏳ |
 
----|---|---|---|
-| 0 | Foundations | 27 Oct | Server and mobile skeletons build, lint and test in CI |
-| 1 | Speak | 28 Oct | The app speaks a typed sentence in Tajik, Uzbek, Russian and English |
-| 2 | Hear | 28–29 Oct | The app transcribes speech in all four languages |
-| 3 | Think | 29–30 Oct | Voice in → Muse Spark reasons as Sado → voice out |
-| 4 | Remember | 31 Oct | Sado saves, searches and recalls facts; the user can view and delete them |
-| 5 | See & Act | 1 Nov | Sado explains a photographed document and performs confirmed actions |
-| 6 | Character & Modes | 2 Nov | Sado's voice, face and personality; Home, Personal, Work and On-the-go modes |
-| 7 | Ship | 3 Nov | Deployed backend, hardened errors, updated README |
-| 8 | Demo | 4 Nov | Three-minute video, submission, post on X |
-
 ---
 
 ## Phase 0 — Foundations
