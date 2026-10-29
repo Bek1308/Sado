@@ -5,9 +5,9 @@ import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/widgets/sado_face.dart';
+import 'package:sado/features/conversation/presentation/widgets/starter_prompts.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/expression_cue.dart';
-import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
 
 class ConversationView extends ConsumerWidget {
@@ -49,9 +49,6 @@ class _Welcome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final languages = SpokenLanguage.values
-        .map((language) => language.nativeName)
-        .join(' · ');
 
     return Center(
       child: SingleChildScrollView(
@@ -76,14 +73,8 @@ class _Welcome extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              languages,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            const SizedBox(height: AppSpacing.xl),
+            const StarterPrompts(),
           ],
         ),
       ),

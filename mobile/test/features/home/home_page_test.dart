@@ -100,4 +100,16 @@ void main() {
     expect(_voice(tester, 'Opa').selected, isTrue);
     expect(_voice(tester, 'Sado').selected, isFalse);
   });
+
+  testWidgets('offers things to ask in the chosen language', (tester) async {
+    await _pumpHomePage(tester, _online);
+
+    expect(find.text('Bugun havo qanday?'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Тоҷикӣ'));
+    await _settle(tester);
+
+    expect(find.text('Имрӯз ҳаво чӣ хел аст?'), findsOneWidget);
+    expect(find.text('Bugun havo qanday?'), findsNothing);
+  });
 }
