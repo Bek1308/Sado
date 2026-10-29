@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sado/core/error/failure.dart';
+import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
+import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/widgets/conversation_view.dart';
 import 'package:sado/features/home/presentation/widgets/composer.dart';
@@ -64,8 +67,34 @@ class HomePage extends ConsumerWidget {
       ..listen(conversationControllerProvider, (previous, next) {
         final error = next.error;
         if (error != null && error != previous?.error) show(error);
+        final reply = next.lastReply;
+        if (reply != null && !identical(reply, previous?.lastReply)) {
+          _confirmActions(context, reply);
+        }
       });
   }
+}
+
+/// One note for everything Sado just did, with a way to see it.
+void _confirmActions(BuildContext context, SadoReply reply) {
+  final notes = [
+    if (reply.remembered.isNotEmpty)
+      'Remembered: ${reply.remembered.join(', ')}',
+    if (reply.reminded.isNotEmpty) 'Reminder: ${reply.reminded.join(', ')}',
+    if (reply.listsChanged) 'List updated',
+  ];
+  if (notes.isEmpty) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(notes.join('\n')),
+        action: SnackBarAction(
+          label: 'View',
+          onPressed: () => context.push(AppRoutes.memories),
+        ),
+      ),
+    );
 }
 
 class _ContentWidth extends StatelessWidget {

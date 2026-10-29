@@ -48,24 +48,6 @@ class _ComposerState extends ConsumerState<Composer> {
 
   Future<void> _voiceReply(SadoReply? reply) async {
     if (reply == null || !mounted) return;
-    if (reply.remembered.isNotEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Saved to memories: ${reply.remembered.join(' · ')}'),
-          ),
-        );
-    }
-    if (reply.reminded.isNotEmpty) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Reminder set: ${reply.reminded.join(' · ')}'),
-          ),
-        );
-    }
     await ref.read(speakControllerProvider.notifier).say(reply.text);
   }
 

@@ -8,6 +8,7 @@ import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/domain/repositories/conversation_repository.dart';
 import 'package:sado/features/conversation/domain/usecases/ask_sado.dart';
+import 'package:sado/features/lists/presentation/providers/list_providers.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
@@ -31,11 +32,16 @@ final class ConversationState {
     this.messages = const [],
     this.isThinking = false,
     this.error,
+    this.lastReply,
   });
 
   final List<ChatMessage> messages;
   final bool isThinking;
   final String? error;
+
+  /// Sado's latest answer with what it did, so the screen can confirm it
+  /// whether the user typed or talked.
+  final SadoReply? lastReply;
 }
 
 class ConversationController extends Notifier<ConversationState> {
@@ -72,10 +78,12 @@ class ConversationController extends Notifier<ConversationState> {
             ...messages,
             ChatMessage(speaker: ChatSpeaker.sado, text: value.text),
           ],
+          lastReply: value,
         );
         if (value.remembered.isNotEmpty) {
           ref.invalidate(memoriesControllerProvider);
         }
+        if (value.listsChanged) ref.invalidate(listsControllerProvider);
         return value;
       case Err(:final failure):
         state = ConversationState(messages: messages, error: failure.message);

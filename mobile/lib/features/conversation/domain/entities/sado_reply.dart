@@ -3,6 +3,7 @@ final class SadoReply {
     required this.text,
     this.remembered = const [],
     this.reminded = const [],
+    this.listsChanged = false,
   });
 
   final String text;
@@ -12,4 +13,7 @@ final class SadoReply {
 
   /// Reminders Sado set while answering.
   final List<String> reminded;
+
+  /// Whether Sado added to or crossed off one of the user's lists.
+  final bool listsChanged;
 }

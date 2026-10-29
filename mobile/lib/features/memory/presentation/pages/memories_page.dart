@@ -2,44 +2,65 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/theme/app_spacing.dart';
+import 'package:sado/features/lists/presentation/widgets/lists_view.dart';
 import 'package:sado/features/memory/domain/entities/memory.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 
-/// Everything Sado has been asked to remember, which the user can review,
-/// add to and delete.
-class MemoriesPage extends ConsumerWidget {
+/// Everything Sado keeps for the user: facts it remembers and the lists it
+/// manages by voice. The user can review, add to and delete all of it.
+class MemoriesPage extends StatelessWidget {
   const MemoriesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final memories = ref.watch(memoriesControllerProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Memories')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _add(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Add memory'),
-      ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppLayout.maxContentWidth,
-          ),
-          child: switch (memories) {
-            AsyncData(:final value) when value.isEmpty => const _Empty(),
-            AsyncData(:final value) => _MemoryList(memories: value),
-            AsyncError(:final error) => _LoadFailed(
-              message: error is Failure
-                  ? error.message
-                  : 'Memories could not be loaded.',
-              onRetry: () => ref.invalidate(memoriesControllerProvider),
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Builder(
+        builder: (context) {
+          final tabs = DefaultTabController.of(context);
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Memories & lists'),
+              bottom: const TabBar(
+                tabs: [
+                  Tab(text: 'Memories'),
+                  Tab(text: 'Lists'),
+                ],
+              ),
             ),
-            _ => const Center(child: CircularProgressIndicator()),
-          },
-        ),
+            // Only memories are added by hand; lists are kept by voice.
+            floatingActionButton: ListenableBuilder(
+              listenable: tabs,
+              builder: (context, _) =>
+                  tabs.index == 0 ? const _AddMemoryButton() : const SizedBox(),
+            ),
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppLayout.maxContentWidth,
+                ),
+                child: const TabBarView(
+                  children: [_MemoriesTab(), ListsView()],
+                ),
+              ),
+            ),
+          );
+        },
       ),
+    );
+  }
+}
+
+class _AddMemoryButton extends ConsumerWidget {
+  const _AddMemoryButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FloatingActionButton.extended(
+      onPressed: () => _add(context, ref),
+      icon: const Icon(Icons.add),
+      label: const Text('Add memory'),
     );
   }
 
@@ -54,6 +75,25 @@ class MemoriesPage extends ConsumerWidget {
         .read(memoriesControllerProvider.notifier)
         .remember(text);
     if (problem != null && context.mounted) _tell(context, problem);
+  }
+}
+
+class _MemoriesTab extends ConsumerWidget {
+  const _MemoriesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return switch (ref.watch(memoriesControllerProvider)) {
+      AsyncData(:final value) when value.isEmpty => const _Empty(),
+      AsyncData(:final value) => _MemoryList(memories: value),
+      AsyncError(:final error) => _LoadFailed(
+        message: error is Failure
+            ? error.message
+            : 'Memories could not be loaded.',
+        onRetry: () => ref.invalidate(memoriesControllerProvider),
+      ),
+      _ => const Center(child: CircularProgressIndicator()),
+    };
   }
 }
 

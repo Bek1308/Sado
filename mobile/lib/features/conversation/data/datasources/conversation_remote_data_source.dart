@@ -41,6 +41,7 @@ class ConversationRemoteDataSource {
         for (final reminder in data['reminded'] as List<dynamic>? ?? const [])
           reminder as String,
       ],
+      listsChanged: data['lists_changed'] as bool? ?? false,
     );
   }
 }
