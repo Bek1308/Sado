@@ -19,6 +19,7 @@ from sado.domain.errors import NothingToAnswerError, ReasoningUnavailableError, 
 from sado.domain.language import Language
 from sado.domain.mode import Mode
 from sado.domain.reminder import Reminder
+from sado.domain.search import WebSearch
 
 REMEMBER = ToolSpec(
     name="remember",
@@ -69,6 +70,28 @@ REMIND = ToolSpec(
 )
 
 
+SEARCH_WEB = ToolSpec(
+    name="search_web",
+    description=(
+        "Look something up on the live web: weather, news, prices, opening hours, "
+        "exchange rates or any fact that may have changed since you were trained. "
+        "Do not search for things you already know or for the user's own memories."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": (
+                    "A short search query, best in English, e.g. 'weather Dushanbe today'."
+                ),
+            }
+        },
+        "required": ["query"],
+    },
+)
+
+
 def reminder_label(reminder: Reminder, zone: tzinfo = UTC) -> str:
     """How a reminder is shown to the user and back to the model, on the user's clock."""
     return f"{reminder.text} ({reminder.due_at.astimezone(zone):%d %b, %H:%M})"
@@ -100,10 +123,12 @@ class Converse:
         reasoning_model: ReasoningModel,
         memories: Memories | None = None,
         reminders: Reminders | None = None,
+        web_search: WebSearch | None = None,
     ) -> None:
         self._reasoning_model = reasoning_model
         self._memories = memories
         self._reminders = reminders
+        self._web_search = web_search
 
     def execute(
         self,
@@ -129,7 +154,11 @@ class Converse:
             mode,
             moment,
         )
-        tools = ([REMEMBER] if self._memories else []) + ([REMIND] if self._reminders else [])
+        tools = [
+            *([REMEMBER] if self._memories else []),
+            *([REMIND] if self._reminders else []),
+            *([SEARCH_WEB] if self._web_search else []),
+        ]
         steps: list[ToolStep] = []
         remembered: list[str] = []
         reminded: list[str] = []
@@ -162,6 +191,8 @@ class Converse:
     ) -> ToolResult:
         if call.name == REMEMBER.name and self._memories is not None:
             return self._save_memory(self._memories, call, remembered)
+        if call.name == SEARCH_WEB.name and self._web_search is not None:
+            return self._search(self._web_search, call)
         if call.name == REMIND.name and self._reminders is not None:
             return self._set_reminder(self._reminders, call, reminded, zone)
         return ToolResult(call, f"Unknown tool '{call.name}'.")
@@ -176,6 +207,16 @@ class Converse:
             return ToolResult(call, f"Nothing saved: {error}.")
         remembered.append(memory.text)
         return ToolResult(call, "Saved.")
+
+    @staticmethod
+    def _search(web_search: WebSearch, call: ToolCall) -> ToolResult:
+        query = call.arguments.get("query")
+        if not isinstance(query, str) or not query.strip():
+            return ToolResult(call, "Nothing searched: 'query' must be text.")
+        try:
+            return ToolResult(call, web_search.search(query.strip()))
+        except SadoError as error:
+            return ToolResult(call, f"Search failed: {error}. Say you could not check it now.")
 
     def _set_reminder(
         self, reminders: Reminders, call: ToolCall, reminded: list[str], zone: tzinfo

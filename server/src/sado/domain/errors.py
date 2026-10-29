@@ -105,3 +105,10 @@ class SpeechSynthesisUnavailableError(SadoError):
 
     def __init__(self) -> None:
         super().__init__("Sado cannot speak right now; please try again")
+
+
+class WebSearchUnavailableError(SadoError):
+    """The web could not be searched right now."""
+
+    def __init__(self) -> None:
+        super().__init__("Web search is unavailable right now")

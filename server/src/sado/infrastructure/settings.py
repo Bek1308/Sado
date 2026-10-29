@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     reasoning_effort: str = "low"
     # Up to four model calls per reply must fit inside the app's 120-second wait.
     reasoning_timeout_seconds: float = 25.0
+    # Approximate place for web searches, so "weather" means the user's weather.
+    search_country: str = "TJ"
+    search_city: str = "Dushanbe"
+    search_timezone: str = "Asia/Dushanbe"
 
     asr_url: str = "http://localhost:8011"
     # Language detection may transcribe the same clip up to four times.
