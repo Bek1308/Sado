@@ -101,4 +101,55 @@ void main() {
       ),
     ).called(1);
   });
+
+  test('voices the next sentence while the current one plays', () async {
+    final events = <String>[];
+    when(
+      () => repository.synthesize(
+        text: any(named: 'text'),
+        language: any(named: 'language'),
+      ),
+    ).thenAnswer((invocation) async {
+      final text = invocation.namedArguments[#text] as String;
+      events.add('voice $text');
+      return Ok(Uint8List.fromList(text.codeUnits));
+    });
+    when(() => audioOutput.playWav(any())).thenAnswer((invocation) async {
+      final bytes = invocation.positionalArguments.first as Uint8List;
+      events.add('play ${String.fromCharCodes(bytes)}');
+    });
+
+    await speakText(
+      text: 'Birinchi gap shu yerda. Ikkinchi gap esa mana bu.',
+      language: SpokenLanguage.uzbek,
+    );
+
+    expect(events, [
+      'voice Birinchi gap shu yerda.',
+      'voice Ikkinchi gap esa mana bu.',
+      'play Birinchi gap shu yerda.',
+      'play Ikkinchi gap esa mana bu.',
+    ]);
+  });
+
+  test('stops between sentences once the caller gives up', () async {
+    when(
+      () => repository.synthesize(
+        text: any(named: 'text'),
+        language: any(named: 'language'),
+      ),
+    ).thenAnswer((_) async => Ok(wav));
+    var wanted = true;
+    when(() => audioOutput.playWav(any())).thenAnswer((_) async {
+      wanted = false;
+    });
+
+    await speakText(
+      text: 'Birinchi gap shu yerda. Ikkinchi gap esa mana bu.',
+      language: SpokenLanguage.uzbek,
+      stillWanted: () => wanted,
+    );
+
+    verify(() => audioOutput.playWav(any())).called(1);
+  });
 }
