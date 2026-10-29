@@ -107,6 +107,9 @@ final class _FakeAudio implements AudioOutput {
   Future<void> stop() async {
     stopCalls++;
   }
+
+  @override
+  Stream<double> get loudness => const Stream.empty();
 }
 
 ProviderContainer _container({

@@ -89,3 +89,21 @@ class ListeningController extends Notifier<ListeningState> {
     }
   }
 }
+
+/// How loud the user is speaking right now, from 0 to 1, so Sado's face can
+/// show it is listening.
+final micLevelProvider = NotifierProvider<MicLevel, double>(MicLevel.new);
+
+class MicLevel extends Notifier<double> {
+  /// Below this the room is quiet; above the ceiling the user is loud.
+  static const _floorDb = -50.0;
+  static const _ceilingDb = -15.0;
+
+  @override
+  double build() => 0;
+
+  void hear(double decibels) =>
+      state = ((decibels - _floorDb) / (_ceilingDb - _floorDb)).clamp(0.0, 1.0);
+
+  void quiet() => state = 0;
+}

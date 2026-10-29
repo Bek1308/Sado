@@ -49,7 +49,8 @@ class LiveConversationController extends Notifier<LiveState> {
 
   @override
   LiveState build() {
-    ref.onDispose(_cancelWatchers);
+    // Providers cannot be touched while this one is being disposed.
+    ref.onDispose(() => _cancelWatchers(quietMic: false));
     return const LiveState();
   }
 
@@ -87,6 +88,7 @@ class LiveConversationController extends Notifier<LiveState> {
     var heardSpeech = false;
     _levels = ref.read(voiceRecorderProvider).levels.listen((level) {
       if (_isStale(session)) return;
+      ref.read(micLevelProvider.notifier).hear(level);
       if (level >= _speechThresholdDb) {
         heardSpeech = true;
         _silenceTimer?.cancel();
@@ -151,7 +153,8 @@ class LiveConversationController extends Notifier<LiveState> {
     state = LiveState(error: message);
   }
 
-  void _cancelWatchers() {
+  void _cancelWatchers({bool quietMic = true}) {
+    if (quietMic) ref.read(micLevelProvider.notifier).quiet();
     final levels = _levels;
     _levels = null;
     unawaited(levels?.cancel());

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sado/core/audio/audioplayers_output.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/listening/presentation/providers/listening_providers.dart';
 import 'package:sado/features/speech/domain/entities/mood.dart';
@@ -20,7 +21,7 @@ class SadoFace extends ConsumerStatefulWidget {
   ConsumerState<SadoFace> createState() => _SadoFaceState();
 }
 
-enum _Activity { idle, listening, thinking, speaking }
+enum _Activity { idle, listening, thinking, voicing, speaking }
 
 /// Every visual knob of the robot, so moods and states blend smoothly.
 class _FaceParams {
@@ -61,12 +62,31 @@ class _FaceParams {
 
 class _SadoFaceState extends ConsumerState<SadoFace>
     with TickerProviderStateMixin {
+  static final _random = math.Random();
+
+  /// How quickly the drawn mouth catches up with the voice; lower is smoother.
+  static const _mouthFollow = 0.35;
+
+  /// The voice counts as playing for this long after its last sound.
+  static const _soundHold = Duration(milliseconds: 250);
+
   late final AnimationController _breathe;
   late final AnimationController _blink;
+  late final AnimationController _glance;
   late final AnimationController _morph;
+  StreamSubscription<double>? _loudness;
+  Timer? _nextBlink;
+  Timer? _nextGlance;
+  Timer? _soundEnds;
+
   _FaceParams _from = const _FaceParams();
   _FaceParams _to = const _FaceParams();
   (Mood, _Activity)? _key;
+  Offset _gazeFrom = Offset.zero;
+  Offset _gazeTo = Offset.zero;
+  double _mouthTarget = 0;
+  double _mouthShown = 0;
+  DateTime _lastSound = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void initState() {
@@ -78,14 +98,92 @@ class _SadoFaceState extends ConsumerState<SadoFace>
     unawaited(_breathe.repeat(reverse: true));
     _blink = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4200),
+      duration: const Duration(milliseconds: 180),
     );
-    unawaited(_blink.repeat());
+    _glance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
     _morph = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
+    _loudness = ref.read(audioOutputProvider).loudness.listen(_hear);
+    _scheduleBlink();
+    _scheduleGlance();
   }
+
+  @override
+  void dispose() {
+    _nextBlink?.cancel();
+    _nextGlance?.cancel();
+    _soundEnds?.cancel();
+    unawaited(_loudness?.cancel());
+    _breathe.dispose();
+    _blink.dispose();
+    _glance.dispose();
+    _morph.dispose();
+    super.dispose();
+  }
+
+  /// Follows Sado's own voice. The face switches between "preparing" and
+  /// "speaking" only when the sound starts or stops, not on every sample.
+  void _hear(double level) {
+    _mouthTarget = level;
+    if (level <= 0.02) return;
+    final wasPlaying = _soundPlaying;
+    _lastSound = DateTime.now();
+    if (!wasPlaying && mounted) setState(() {});
+    _soundEnds?.cancel();
+    _soundEnds = Timer(_soundHold, () {
+      if (mounted) setState(() {});
+    });
+  }
+
+  /// People blink every few seconds at uneven intervals, now and then twice.
+  void _scheduleBlink() {
+    final wait = 2200 + _random.nextInt(3800);
+    _nextBlink = Timer(Duration(milliseconds: wait), () async {
+      if (!mounted) return;
+      await _blink.forward(from: 0);
+      if (mounted && _random.nextDouble() < 0.2) {
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        if (mounted) await _blink.forward(from: 0);
+      }
+      if (mounted) _scheduleBlink();
+    });
+  }
+
+  /// The eyes wander a little while idle, look up while thinking and come
+  /// back to the user while listening or talking.
+  void _scheduleGlance() {
+    final wait = 1400 + _random.nextInt(2600);
+    _nextGlance = Timer(Duration(milliseconds: wait), () {
+      if (!mounted) return;
+      _gazeFrom = _currentGaze;
+      _gazeTo = switch (_key?.$2 ?? _Activity.idle) {
+        _Activity.thinking ||
+        _Activity.voicing => Offset(0.5 + _jitter(0.2), -0.45),
+        _Activity.listening || _Activity.speaking => Offset(
+          _jitter(0.15),
+          _jitter(0.08),
+        ),
+        _Activity.idle => Offset(_jitter(0.6), _jitter(0.3)),
+      };
+      unawaited(_glance.forward(from: 0));
+      _scheduleGlance();
+    });
+  }
+
+  double _jitter(double reach) => (_random.nextDouble() * 2 - 1) * reach;
+
+  Offset get _currentGaze => Offset.lerp(
+    _gazeFrom,
+    _gazeTo,
+    Curves.easeOutCubic.transform(_glance.value),
+  )!;
+
+  bool get _soundPlaying => DateTime.now().difference(_lastSound) < _soundHold;
 
   /// Starts a morph toward [target] after this frame finishes.
   void _morphToward(_FaceParams target, (Mood, _Activity) key) {
@@ -102,7 +200,7 @@ class _SadoFaceState extends ConsumerState<SadoFace>
   /// Mood, activity and face parameters for the current app state.
   (Mood, _Activity, _FaceParams) _resolve(WidgetRef ref) {
     final mood = ref.watch(moodProvider);
-    final speaking = ref.watch(speakControllerProvider).isLoading;
+    final voicing = ref.watch(speakControllerProvider).isLoading;
     final thinking = ref.watch(
       conversationControllerProvider.select((state) => state.isThinking),
     );
@@ -110,8 +208,9 @@ class _SadoFaceState extends ConsumerState<SadoFace>
       ListeningRecording() || ListeningTranscribing() => true,
       _ => false,
     };
-    final activity = speaking
-        ? _Activity.speaking
+    final activity = voicing
+        // The voice is still being prepared until the first sound plays.
+        ? (_soundPlaying ? _Activity.speaking : _Activity.voicing)
         : thinking
         ? _Activity.thinking
         : listening
@@ -121,16 +220,9 @@ class _SadoFaceState extends ConsumerState<SadoFace>
   }
 
   @override
-  void dispose() {
-    _breathe.dispose();
-    _blink.dispose();
-    _morph.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final target = _resolve(ref);
+    final micLevel = ref.watch(micLevelProvider);
     final key = (target.$1, target.$2);
     if (_key == null) {
       _from = _to = target.$3;
@@ -140,24 +232,24 @@ class _SadoFaceState extends ConsumerState<SadoFace>
       _morphToward(target.$3, key);
     }
     return AnimatedBuilder(
-      animation: Listenable.merge([_breathe, _blink, _morph]),
+      animation: Listenable.merge([_breathe, _blink, _glance, _morph]),
       builder: (context, _) {
-        final params = _FaceParams.lerp(_from, _to, _morph.value);
+        _mouthShown += (_mouthTarget - _mouthShown) * _mouthFollow;
         final activity = _key?.$2 ?? _Activity.idle;
-        // A quick lid dip near the end of every blink cycle.
-        final blinkPhase = (_blink.value - 0.9) / 0.1;
-        final blink = blinkPhase <= 0
-            ? 0.0
-            : math.sin(blinkPhase * math.pi).clamp(0.0, 1.0);
-        final flap = 0.5 + 0.5 * math.sin(_breathe.value * 2 * math.pi * 12);
+        final breath = _breathe.value;
         return CustomPaint(
           size: Size.square(widget.size),
           painter: _SadoFacePainter(
-            params: params,
-            blink: blink,
-            hover: _breathe.value,
-            mouthFlap: activity == _Activity.speaking ? flap : 0,
-            thinkingDots: activity == _Activity.thinking,
+            params: _FaceParams.lerp(_from, _to, _morph.value),
+            blink: math.sin(_blink.value * math.pi),
+            hover: breath,
+            // A slow sway, so the head never looks frozen in place.
+            tilt: (breath - 0.5) * 0.06,
+            gaze: _currentGaze,
+            mouthLevel: activity == _Activity.speaking ? _mouthShown : 0,
+            thinkingDots:
+                activity == _Activity.thinking || activity == _Activity.voicing,
+            listenLevel: activity == _Activity.listening ? micLevel : 0,
           ),
         );
       },
@@ -209,7 +301,7 @@ _FaceParams _blend(Mood mood, _Activity activity) {
         visor: params.visor,
         mouthActivity: 1,
       );
-    case _Activity.thinking:
+    case _Activity.thinking || _Activity.voicing:
       params = _FaceParams(
         eyeSize: params.eyeSize,
         browTilt: params.browTilt,
@@ -236,15 +328,29 @@ class _SadoFacePainter extends CustomPainter {
     required this.params,
     required this.blink,
     required this.hover,
-    required this.mouthFlap,
+    required this.tilt,
+    required this.gaze,
+    required this.mouthLevel,
     required this.thinkingDots,
+    required this.listenLevel,
   });
 
   final _FaceParams params;
   final double blink;
   final double hover;
-  final double mouthFlap;
+
+  /// Head rotation in radians.
+  final double tilt;
+
+  /// Where the eyes look, each axis from -1 to 1.
+  final Offset gaze;
+
+  /// How loud Sado's own voice is right now, from 0 to 1.
+  final double mouthLevel;
   final bool thinkingDots;
+
+  /// How loud the user is while Sado listens, from 0 to 1.
+  final double listenLevel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -257,8 +363,15 @@ class _SadoFacePainter extends CustomPainter {
           (hover - 0.5) * 2 * radius * 0.05,
         );
     final visor = params.visor;
-    final pulse = 0.5 + 0.5 * math.sin(hover * 2 * math.pi * 2);
+    final idlePulse = 0.5 + 0.5 * math.sin(hover * 2 * math.pi * 2);
+    // While listening, the antenna lamp follows the user's voice.
+    final pulse = math.max(idlePulse * (1 - listenLevel), listenLevel);
 
+    canvas
+      ..save()
+      ..translate(center.dx, center.dy)
+      ..rotate(tilt)
+      ..translate(-center.dx, -center.dy);
     _paintNeck(canvas, center, radius);
     _paintHead(canvas, center, radius);
     _paintAntenna(canvas, center, radius, visor, pulse);
@@ -266,6 +379,7 @@ class _SadoFacePainter extends CustomPainter {
     _paintVisor(canvas, center, radius, visor);
     _paintCheeks(canvas, center, radius, visor);
     _paintMouth(canvas, center, radius, visor);
+    canvas.restore();
   }
 
   void _paintNeck(Canvas canvas, Offset center, double radius) {
@@ -394,15 +508,16 @@ class _SadoFacePainter extends CustomPainter {
           ..strokeWidth = radius * 0.025,
       );
 
-    // Thinking eyes drift sideways; everything else looks straight ahead.
-    final sweep = thinkingDots ? math.sin(hover * 2 * math.pi) * 0.5 : 0.0;
-    final gaze = (params.gazeDX + sweep).clamp(-1.0, 1.0);
+    final lookX = (params.gazeDX + gaze.dx).clamp(-1.0, 1.0);
+    final lookY = gaze.dy.clamp(-1.0, 1.0);
+    // Eyes open a little wider the louder the user speaks.
+    final eyeSize = params.eyeSize * (1 + 0.15 * listenLevel);
     final eyeHeight =
-        radius * 0.2 * params.eyeSize * params.eyeOpen * (1 - blink * 0.92);
+        radius * 0.2 * eyeSize * params.eyeOpen * (1 - blink * 0.92);
     for (final side in [-1.0, 1.0]) {
       final eyeCenter = Offset(
-        visorCenter.dx + side * radius * 0.28 + gaze * radius * 0.1,
-        visorCenter.dy,
+        visorCenter.dx + side * radius * 0.28 + lookX * radius * 0.1,
+        visorCenter.dy + lookY * radius * 0.06,
       );
       if (eyeHeight < radius * 0.02) {
         // Closed lids read as a glowing slit.
@@ -419,7 +534,7 @@ class _SadoFacePainter extends CustomPainter {
       canvas.drawOval(
         Rect.fromCenter(
           center: eyeCenter,
-          width: radius * 0.2 * params.eyeSize,
+          width: radius * 0.2 * eyeSize,
           height: eyeHeight,
         ),
         Paint()..color = visor,
@@ -481,14 +596,15 @@ class _SadoFacePainter extends CustomPainter {
     );
     if (params.mouthActivity > 0.05) {
       for (var bar = 0; bar < 5; bar++) {
-        final wave =
-            (0.3 +
-                    0.7 *
-                        (0.5 +
-                            0.5 *
-                                math.sin(mouthFlap * math.pi * 2 + bar * 0.9)))
-                .clamp(0.0, 1.0);
-        final barHeight = mouthRect.height * 0.75 * wave * params.mouthActivity;
+        // Middle bars open widest, like a mouth; a slow ripple keeps
+        // neighbouring bars from moving in lockstep.
+        final shape = _mouthShape[bar];
+        final ripple = 0.85 + 0.15 * math.sin(hover * math.pi * 14 + bar * 1.3);
+        final barHeight =
+            mouthRect.height *
+            0.8 *
+            (mouthLevel * shape * ripple).clamp(0.0, 1.0) *
+            params.mouthActivity;
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromCenter(
@@ -536,6 +652,8 @@ class _SadoFacePainter extends CustomPainter {
     );
   }
 
+  static const _mouthShape = [0.55, 0.85, 1.0, 0.85, 0.55];
+
   @override
   bool shouldRepaint(_SadoFacePainter old) =>
       old.params.eyeOpen != params.eyeOpen ||
@@ -548,6 +666,9 @@ class _SadoFacePainter extends CustomPainter {
       old.params.visor != params.visor ||
       old.blink != blink ||
       old.hover != hover ||
-      old.mouthFlap != mouthFlap ||
+      old.tilt != tilt ||
+      old.gaze != gaze ||
+      old.mouthLevel != mouthLevel ||
+      old.listenLevel != listenLevel ||
       old.thinkingDots != thinkingDots;
 }
