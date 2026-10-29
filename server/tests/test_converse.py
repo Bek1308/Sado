@@ -68,6 +68,7 @@ def test_replies_endpoint_returns_sado_answer() -> None:
         "reply": "You said: салом",
         "remembered": [],
         "reminded": [],
+        "lists_changed": False,
     }
 
 

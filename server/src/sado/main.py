@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from sado.application.converse import Converse
 from sado.application.explain_document import ExplainDocument
+from sado.application.lists import Lists
 from sado.application.memories import Memories
 from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
@@ -21,6 +22,7 @@ from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
 from sado.domain.errors import SadoError
 from sado.domain.language import Language
+from sado.domain.lists import ListStore
 from sado.domain.memory import MemoryStore
 from sado.domain.reminder import ReminderStore
 from sado.domain.search import WebSearch
@@ -28,6 +30,7 @@ from sado.domain.speech import LanguagePack
 from sado.domain.vision import DocumentExplainer
 from sado.infrastructure.documents.readers import CompositeDocumentReader
 from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
+from sado.infrastructure.memory.sqlite_lists import SqliteListStore
 from sado.infrastructure.memory.sqlite_reminders import SqliteReminderStore
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 from sado.infrastructure.reasoning.muse_search import MuseWebSearch
@@ -41,6 +44,7 @@ from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import (
     explanations,
     health,
+    lists,
     memories,
     reminders,
     replies,
@@ -149,6 +153,7 @@ def create_app(  # noqa: PLR0913
     memory_store: MemoryStore | None = None,
     reminder_store: ReminderStore | None = None,
     web_search: WebSearch | None = None,
+    list_store: ListStore | None = None,
 ) -> FastAPI:
     settings = get_settings()
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
@@ -175,7 +180,9 @@ def create_app(  # noqa: PLR0913
     model_api = _model_api(settings)
     model = reasoning_model or _default_reasoning_model(settings, model_api)
     search = web_search or _web_search(settings, model_api)
-    app.state.converse = Converse(model, saved, alarms, search)
+    shopping = Lists(list_store or SqliteListStore(settings.memory_db_path))
+    app.state.lists = shopping
+    app.state.converse = Converse(model, saved, alarms, search, shopping)
     # Vision reuses the same thinker; a custom text-only reasoner keeps talking
     # while document explanations report the service as unavailable.
     if document_explainer is None:
@@ -196,6 +203,7 @@ def create_app(  # noqa: PLR0913
     app.include_router(voices.router)
     app.include_router(memories.router)
     app.include_router(reminders.router)
+    app.include_router(lists.router)
     return app
 
 

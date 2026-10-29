@@ -44,6 +44,7 @@ class ReplyResponse(BaseModel):
     reply: str
     remembered: list[str]
     reminded: list[str]
+    lists_changed: bool
 
 
 @router.post("")
@@ -62,4 +63,5 @@ def reply(
         reply=answer.text,
         remembered=list(answer.remembered),
         reminded=list(answer.reminded),
+        lists_changed=answer.lists_changed,
     )

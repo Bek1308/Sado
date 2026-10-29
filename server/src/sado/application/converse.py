@@ -2,6 +2,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta, timezone, tzinfo
 
+from sado.application.list_tools import LIST_TOOLS, run_list_tool
+from sado.application.lists import Lists
 from sado.application.memories import Memories
 from sado.application.persona import persona_instructions
 from sado.application.reminders import Reminders
@@ -112,6 +114,21 @@ class Reply:
     """Facts Sado saved while answering, so the app can show them."""
     reminded: tuple[str, ...] = field(default=())
     """Reminders Sado set while answering, so the app can show them."""
+    lists_changed: bool = False
+    """Whether Sado changed a list while answering, so the app can refresh it."""
+
+
+@dataclass(slots=True)
+class _Outcome:
+    """What one answer's tool calls changed; fresh per request, never shared."""
+
+    remembered: list[str] = field(default_factory=list)
+    reminded: list[str] = field(default_factory=list)
+    lists_changed: bool = False
+
+    @property
+    def acted(self) -> bool:
+        return bool(self.remembered or self.reminded or self.lists_changed)
 
 
 class Converse:
@@ -124,11 +141,13 @@ class Converse:
         memories: Memories | None = None,
         reminders: Reminders | None = None,
         web_search: WebSearch | None = None,
+        lists: Lists | None = None,
     ) -> None:
         self._reasoning_model = reasoning_model
         self._memories = memories
         self._reminders = reminders
         self._web_search = web_search
+        self._lists = lists
 
     def execute(
         self,
@@ -158,46 +177,50 @@ class Converse:
             *([REMEMBER] if self._memories else []),
             *([REMIND] if self._reminders else []),
             *([SEARCH_WEB] if self._web_search else []),
+            *(LIST_TOOLS if self._lists else ()),
         ]
         steps: list[ToolStep] = []
-        remembered: list[str] = []
-        reminded: list[str] = []
+        outcome = _Outcome()
 
         for _ in range(self._MAX_TOOL_STEPS + 1):
             turn = self._reasoning_model.respond(instructions, conversation, tools, steps)
             if isinstance(turn, Answer):
-                text = turn.text.strip() or self._fallback_text(language, remembered, reminded)
+                text = turn.text.strip() or self._fallback_text(language, outcome)
                 if self._reminders is not None:
                     self._reminders.delivered(due, moment)
-                return Reply(text=text, remembered=tuple(remembered), reminded=tuple(reminded))
-            steps.append(
-                ToolStep(
-                    results=tuple(
-                        self._run(call, remembered, reminded, zone) for call in turn.calls
-                    )
+                return Reply(
+                    text=text,
+                    remembered=tuple(outcome.remembered),
+                    reminded=tuple(outcome.reminded),
+                    lists_changed=outcome.lists_changed,
                 )
+            steps.append(
+                ToolStep(results=tuple(self._run(call, outcome, zone) for call in turn.calls))
             )
         raise ReasoningUnavailableError
 
     @staticmethod
-    def _fallback_text(language: Language, remembered: list[str], reminded: list[str]) -> str:
+    def _fallback_text(language: Language, outcome: _Outcome) -> str:
         # Models often go quiet right after a tool call; a short confirmation beats silence.
-        if remembered or reminded:
+        if outcome.acted:
             return _DONE[language]
         raise ReasoningUnavailableError
 
-    def _run(
-        self, call: ToolCall, remembered: list[str], reminded: list[str], zone: tzinfo
-    ) -> ToolResult:
+    def _run(self, call: ToolCall, outcome: _Outcome, zone: tzinfo) -> ToolResult:
         if call.name == REMEMBER.name and self._memories is not None:
-            return self._save_memory(self._memories, call, remembered)
+            return self._save_memory(self._memories, call, outcome)
+        if call.name == REMIND.name and self._reminders is not None:
+            return self._set_reminder(self._reminders, call, outcome, zone)
         if call.name == SEARCH_WEB.name and self._web_search is not None:
             return self._search(self._web_search, call)
-        if call.name == REMIND.name and self._reminders is not None:
-            return self._set_reminder(self._reminders, call, reminded, zone)
+        if self._lists is not None and call.name in _LIST_TOOL_NAMES:
+            result, changed = run_list_tool(self._lists, call)
+            outcome.lists_changed = outcome.lists_changed or changed
+            return result
         return ToolResult(call, f"Unknown tool '{call.name}'.")
 
-    def _save_memory(self, memories: Memories, call: ToolCall, remembered: list[str]) -> ToolResult:
+    @staticmethod
+    def _save_memory(memories: Memories, call: ToolCall, outcome: _Outcome) -> ToolResult:
         fact = call.arguments.get("fact")
         if not isinstance(fact, str):
             return ToolResult(call, "Nothing saved: 'fact' must be text.")
@@ -205,7 +228,7 @@ class Converse:
             memory = memories.remember(fact)
         except SadoError as error:
             return ToolResult(call, f"Nothing saved: {error}.")
-        remembered.append(memory.text)
+        outcome.remembered.append(memory.text)
         return ToolResult(call, "Saved.")
 
     @staticmethod
@@ -218,8 +241,9 @@ class Converse:
         except SadoError as error:
             return ToolResult(call, f"Search failed: {error}. Say you could not check it now.")
 
+    @staticmethod
     def _set_reminder(
-        self, reminders: Reminders, call: ToolCall, reminded: list[str], zone: tzinfo
+        reminders: Reminders, call: ToolCall, outcome: _Outcome, zone: tzinfo
     ) -> ToolResult:
         text = call.arguments.get("text")
         due = call.arguments.get("due")
@@ -229,5 +253,8 @@ class Converse:
             reminder = reminders.remind(text, due, zone)
         except SadoError as error:
             return ToolResult(call, f"Nothing set: {error}.")
-        reminded.append(reminder_label(reminder, zone))
+        outcome.reminded.append(reminder_label(reminder, zone))
         return ToolResult(call, "Set.")
+
+
+_LIST_TOOL_NAMES = frozenset(tool.name for tool in LIST_TOOLS)

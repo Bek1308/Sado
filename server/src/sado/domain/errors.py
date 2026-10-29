@@ -112,3 +112,13 @@ class WebSearchUnavailableError(SadoError):
 
     def __init__(self) -> None:
         super().__init__("Web search is unavailable right now")
+
+
+class UnnamedListError(SadoError):
+    def __init__(self) -> None:
+        super().__init__("A list needs a name")
+
+
+class UnknownListItemError(SadoError):
+    def __init__(self, item_id: str) -> None:
+        super().__init__(f"No list item with id '{item_id}'")

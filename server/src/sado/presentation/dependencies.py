@@ -4,6 +4,7 @@ from fastapi import Request
 
 from sado.application.converse import Converse
 from sado.application.explain_document import ExplainDocument
+from sado.application.lists import Lists
 from sado.application.memories import Memories
 from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
@@ -17,6 +18,10 @@ def get_converse(request: Request) -> Converse:
 
 def get_explain_document(request: Request) -> ExplainDocument:
     return cast(ExplainDocument, request.app.state.explain_document)
+
+
+def get_lists(request: Request) -> Lists:
+    return cast(Lists, request.app.state.lists)
 
 
 def get_memories(request: Request) -> Memories:
