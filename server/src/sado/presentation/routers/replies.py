@@ -8,7 +8,7 @@ from sado.application.converse import Converse
 from sado.domain.conversation import Message, Speaker
 from sado.domain.language import Language
 from sado.domain.mode import Mode
-from sado.presentation.dependencies import get_converse
+from sado.presentation.dependencies import get_converse, may_control_desktop
 
 router = APIRouter(prefix="/replies", tags=["conversation"])
 
@@ -58,12 +58,17 @@ class ReplyResponse(BaseModel):
 def reply(
     request: ReplyRequest,
     converse: Annotated[Converse, Depends(get_converse)],
+    trusted: Annotated[bool, Depends(may_control_desktop)],
 ) -> ReplyResponse:
-    return answer(request, converse)
+    return answer(request, converse, allow_desktop=trusted)
 
 
 def answer(
-    request: ReplyRequest, converse: Converse, action_result: str | None = None
+    request: ReplyRequest,
+    converse: Converse,
+    action_result: str | None = None,
+    *,
+    allow_desktop: bool,
 ) -> ReplyResponse:
     conversation = [Message(message.speaker, message.text) for message in request.messages]
     reply = converse.execute(
@@ -72,6 +77,7 @@ def answer(
         request.mode,
         timedelta(minutes=request.utc_offset_minutes),
         action_result,
+        allow_desktop=allow_desktop,
     )
     pending = reply.pending_action
     return ReplyResponse(

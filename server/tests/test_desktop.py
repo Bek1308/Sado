@@ -32,6 +32,8 @@ from sado.domain.language import Language
 from sado.main import create_app
 from tests.fakes import fake_language_pack, fake_voice_catalog
 
+_TOKEN = "desk-secret"
+_TRUSTED = {"X-Sado-Desktop-Token": _TOKEN}
 _TERMINAL = WindowInfo(id=11, title="Muse Code - Sado", app="WindowsTerminal")
 _BROWSER = WindowInfo(id=22, title="YouTube - Google Chrome", app="chrome")
 
@@ -179,7 +181,9 @@ def test_sado_asks_before_typing_and_reports_after_the_yes() -> None:
             voice_catalog=fake_voice_catalog(),
             reasoning_model=model,
             desktop=desktop,
-        )
+            desktop_token=_TOKEN,
+        ),
+        headers=_TRUSTED,
     )
     ask = {"speaker": "user", "text": "Agentga README yozishni ayt"}
 
@@ -221,7 +225,9 @@ def test_a_cancelled_action_never_runs() -> None:
             voice_catalog=fake_voice_catalog(),
             reasoning_model=_Model(_ask_to_type(), Answer("Yozaymi?")),
             desktop=desktop,
-        )
+            desktop_token=_TOKEN,
+        ),
+        headers=_TRUSTED,
     )
     first = client.post(
         "/replies",
@@ -251,3 +257,28 @@ def test_without_desktop_control_sado_has_no_hands() -> None:
     Converse(model).execute([Message(Speaker.USER, "salom")], Language.UZBEK)
 
     assert all(tool.name != LIST_WINDOWS.name for tool in seen[0])
+
+
+@pytest.mark.parametrize("headers", [{}, {"X-Sado-Desktop-Token": "guess"}])
+def test_devices_without_the_token_cannot_touch_the_computer(headers: dict[str, str]) -> None:
+    desktop = _FakeDesktop()
+    model = _Model(Answer("Salom"))
+    pack, _ = fake_language_pack(Language.UZBEK)
+    client = TestClient(
+        create_app(
+            language_packs={Language.UZBEK: pack},
+            voice_catalog=fake_voice_catalog(),
+            reasoning_model=model,
+            desktop=desktop,
+            desktop_token=_TOKEN,
+        ),
+        headers=headers,
+    )
+    message = {"speaker": "user", "text": "Terminalga yoz"}
+
+    client.post("/replies", json={"language": "uz", "messages": [message]})
+    confirm = client.post("/actions/any/confirm", json={"language": "uz", "messages": [message]})
+
+    assert all(tool.name != LIST_WINDOWS.name for tool in model.tools[0])
+    assert confirm.status_code == 403
+    assert client.post("/actions/any/cancel").status_code == 403

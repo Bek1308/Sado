@@ -161,18 +161,22 @@ class Converse:
         self._lists = lists
         self._desktop = desktop
 
-    def execute(
+    # One request's details; the trust flag is keyword-only so it is never set by accident.
+    def execute(  # noqa: PLR0913
         self,
         conversation: Sequence[Message],
         language: Language,
         mode: Mode = Mode.PERSONAL,
         utc_offset: timedelta = timedelta(0),
         action_result: str | None = None,
+        *,
+        allow_desktop: bool = False,
     ) -> Reply:
         """Answers the last user message.
 
         `action_result` is what a computer action did after the user confirmed it, so Sado
-        can tell them how it went.
+        can tell them how it went. `allow_desktop` is set only for requests from a device
+        trusted to control the computer.
         """
         if not conversation:
             raise NothingToAnswerError
@@ -206,7 +210,7 @@ class Converse:
                 *([REMIND] if self._reminders else []),
                 *([SEARCH_WEB] if self._web_search else []),
                 *(LIST_TOOLS if self._lists else ()),
-                *(DESKTOP_TOOLS if self._desktop else ()),
+                *(DESKTOP_TOOLS if self._desktop and allow_desktop else ()),
             ]
         )
         steps: list[ToolStep] = []

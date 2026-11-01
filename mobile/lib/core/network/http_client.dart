@@ -8,6 +8,10 @@ final httpClientProvider = Provider<Dio>(
       baseUrl: AppConfig.apiBaseUrl,
       connectTimeout: AppConfig.connectTimeout,
       receiveTimeout: AppConfig.receiveTimeout,
+      headers: {
+        if (AppConfig.desktopToken.isNotEmpty)
+          'X-Sado-Desktop-Token': AppConfig.desktopToken,
+      },
     ),
   ),
 );

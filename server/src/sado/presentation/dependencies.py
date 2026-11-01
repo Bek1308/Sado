@@ -1,3 +1,4 @@
+import secrets
 from typing import cast
 
 from fastapi import Request
@@ -11,6 +12,13 @@ from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
+
+
+def may_control_desktop(request: Request) -> bool:
+    """Whether this request comes from a device trusted to drive the computer."""
+    expected = cast(str, getattr(request.app.state, "desktop_token", ""))
+    given = request.headers.get("X-Sado-Desktop-Token", "")
+    return bool(expected) and secrets.compare_digest(expected, given)
 
 
 def get_converse(request: Request) -> Converse:

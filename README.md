@@ -69,6 +69,17 @@ Camera-first: understand any paper, in any language, in seconds.
 
 ---
 
+## 💻 Sado on your computer
+
+The same app runs on Windows as a quiet companion in the tray. Press **Ctrl+Alt+Space** in any app and just talk; a small window shows Sado's face and a live voice wave while it listens, thinks and answers, then slips away.
+
+Sado can see and drive the computer: list and read windows, open apps and links, type into a window and run commands. It reads a terminal's latest output, so it can tell you what a coding agent such as Muse Code just finished and hand it the next task by voice.
+
+- **Looking is free, acting asks first.** Typing, closing windows and running commands wait for your yes, by voice or tap; each request is single-use and expires in five minutes, and the model can never confirm it itself.
+- **Only your computer's own app may drive it.** Computer control is off by default and needs a secret token that only the desktop build carries, so a phone or anyone reaching the server through a tunnel can never control the computer.
+
+---
+
 ## ⚙️ How it works
 
 ```mermaid
@@ -150,6 +161,8 @@ bash server/scripts/download_models.sh
 cd server/workers && ~/.venvs/sado-models/bin/python -m uvicorn omnilingual_asr_worker:app --port 8011
 ```
 
+**Computer control** (optional, Windows): `uv sync --extra desktop`, then set `SADO_DESKTOP_CONTROL=true` and a random `SADO_DESKTOP_TOKEN` in `server/.env`, and build the desktop app with `flutter build windows --dart-define=SADO_API_URL=http://localhost:8000 --dart-define=SADO_DESKTOP_TOKEN=<the same token>`.
+
 **App** (Flutter 3.44):
 
 ```bash
@@ -177,6 +190,7 @@ Sado is being built live during the hackathon. All code in this repository was w
 - [x] Character: animated robot face that follows mood and activity
 - [x] Modes: Home · Personal · Work · On the go
 - [x] Live talk: hands-free conversation, silence ends the turn
+- [x] Computer companion: tray app, hotkey, voice wave; reads and drives windows and terminal agents, asking before it acts
 - [ ] Hosted backend for judges
 - [ ] Demo video
 

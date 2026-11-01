@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Off unless the owner turns it on: Sado may then read and drive this computer's
     # windows, always asking before it types, closes or runs anything.
     desktop_control: bool = False
+    # Only requests carrying this token may use the computer, so a tunnel that exposes
+    # the server to a phone never exposes the computer with it.
+    desktop_token: SecretStr | None = None
     mood_reference_dir: str = "data/voices"
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0

@@ -10,6 +10,7 @@ from typing import cast
 
 import httpx
 from fastapi import FastAPI
+from pydantic import SecretStr
 
 from sado.application.converse import Converse
 from sado.application.desktop_tools import DesktopTools, PendingActions
@@ -87,10 +88,17 @@ def _voice_config(settings: Settings) -> VoiceConfig:
 def _desktop(settings: Settings) -> Desktop | None:
     if not settings.desktop_control:
         return None
+    if not _secret(settings.desktop_token):
+        logger.warning("Desktop control needs SADO_DESKTOP_TOKEN; leaving it off")
+        return None
     # Imported only when asked for: it needs Windows and the optional `desktop` extra.
     from sado.infrastructure.desktop.windows_desktop import WindowsDesktop  # noqa: PLC0415
 
     return WindowsDesktop()
+
+
+def _secret(value: SecretStr | None) -> str:
+    return value.get_secret_value().strip() if value else ""
 
 
 def _model_api(settings: Settings) -> httpx.Client | None:
@@ -167,6 +175,7 @@ def create_app(  # noqa: PLR0913
     web_search: WebSearch | None = None,
     list_store: ListStore | None = None,
     desktop: Desktop | None = None,
+    desktop_token: str | None = None,
 ) -> FastAPI:
     settings = get_settings()
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
@@ -198,6 +207,7 @@ def create_app(  # noqa: PLR0913
     pending_actions = PendingActions()
     app.state.pending_actions = pending_actions
     computer = desktop or _desktop(settings)
+    app.state.desktop_token = (desktop_token or _secret(settings.desktop_token)) if computer else ""
     hands = DesktopTools(computer, pending_actions) if computer else None
     app.state.converse = Converse(model, saved, alarms, search, shopping, hands)
     # Vision reuses the same thinker; a custom text-only reasoner keeps talking

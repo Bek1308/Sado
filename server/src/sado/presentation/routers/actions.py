@@ -1,17 +1,26 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from sado.application.converse import Converse
 from sado.application.desktop_tools import PendingActions
 from sado.domain.errors import SadoError
-from sado.presentation.dependencies import get_converse, get_pending_actions
+from sado.presentation.dependencies import (
+    get_converse,
+    get_pending_actions,
+    may_control_desktop,
+)
 from sado.presentation.routers.replies import ReplyRequest, ReplyResponse, answer
 
 router = APIRouter(prefix="/actions", tags=["desktop"])
 
 
-@router.post("/{action_id}/confirm")
+def _trusted_device(trusted: Annotated[bool, Depends(may_control_desktop)]) -> None:
+    if not trusted:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This device may not control the computer")
+
+
+@router.post("/{action_id}/confirm", dependencies=[Depends(_trusted_device)])
 def confirm(
     action_id: str,
     request: ReplyRequest,
@@ -27,10 +36,14 @@ def confirm(
         result = action.run()
     except SadoError as error:
         result = f"It failed: {error}"
-    return answer(request, converse, action_result=result)
+    return answer(request, converse, action_result=result, allow_desktop=True)
 
 
-@router.post("/{action_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/{action_id}/cancel",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(_trusted_device)],
+)
 def cancel(
     action_id: str,
     pending: Annotated[PendingActions, Depends(get_pending_actions)],
