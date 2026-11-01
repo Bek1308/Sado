@@ -19,6 +19,12 @@ final class LiveState {
   bool get isLive => phase != LivePhase.idle;
 }
 
+/// How long Sado keeps listening when nobody speaks before the conversation
+/// ends on its own, the way a person stops waiting.
+final liveQuietLimitProvider = Provider<Duration>(
+  (ref) => const Duration(seconds: 12),
+);
+
 final liveConversationProvider =
     NotifierProvider<LiveConversationController, LiveState>(
       LiveConversationController.new,
@@ -46,6 +52,7 @@ class LiveConversationController extends Notifier<LiveState> {
   StreamSubscription<double>? _levels;
   Timer? _silenceTimer;
   Timer? _maxTimer;
+  Timer? _quietTimer;
 
   @override
   LiveState build() {
@@ -97,18 +104,20 @@ class LiveConversationController extends Notifier<LiveState> {
         _silenceTimer = Timer(_silenceTimeout, () => _finishTurn(session));
       }
     });
-    _maxTimer = Timer(
-      _maxTurn,
-      () => heardSpeech ? _finishTurn(session) : _listenAgain(session),
-    );
+    _maxTimer = Timer(_maxTurn, () => _finishTurn(session));
+    _quietTimer = Timer(ref.read(liveQuietLimitProvider), () {
+      if (!heardSpeech) unawaited(_endQuietly(session));
+    });
   }
 
-  /// Nobody spoke for a whole turn: drop the silence instead of uploading it.
-  Future<void> _listenAgain(int session) async {
+  /// Nobody spoke: the conversation is over. The silence is dropped instead
+  /// of uploaded, and nothing is reported as a problem.
+  Future<void> _endQuietly(int session) async {
     if (_isStale(session)) return;
+    _session++;
     _cancelWatchers();
+    state = const LiveState();
     await ref.read(listeningControllerProvider.notifier).cancel();
-    await _beginTurn(session);
   }
 
   Future<void> _finishTurn(int session) async {
@@ -162,5 +171,7 @@ class LiveConversationController extends Notifier<LiveState> {
     _silenceTimer = null;
     _maxTimer?.cancel();
     _maxTimer = null;
+    _quietTimer?.cancel();
+    _quietTimer = null;
   }
 }

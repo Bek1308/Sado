@@ -47,8 +47,10 @@ final class _FakeRecorder implements VoiceRecorder {
   }
 
   /// Speech, then silence: the turn ends 1.2 s after the last sample.
+  List<double> spoken = [-50, -20, -20, -50];
+
   @override
-  Stream<double> get levels => Stream.fromIterable([-50, -20, -20, -50]);
+  Stream<double> get levels => Stream.fromIterable(spoken);
 }
 
 final class _FakeTranscriptions implements TranscriptionRepository {
@@ -128,6 +130,7 @@ ProviderContainer _container({
   required _FakeSpeech speech,
   required _FakeAudio audio,
   _FakeRecorder? recorder,
+  Duration quietLimit = const Duration(seconds: 30),
   Result<Transcription> heard = const Ok((
     text: 'salom',
     language: SpokenLanguage.uzbek,
@@ -142,6 +145,7 @@ ProviderContainer _container({
       conversationRepositoryProvider.overrideWithValue(conversation),
       speakTextProvider.overrideWithValue(SpeakText(speech, audio)),
       audioOutputProvider.overrideWithValue(audio),
+      liveQuietLimitProvider.overrideWithValue(quietLimit),
     ],
   );
   addTearDown(container.dispose);
@@ -267,5 +271,26 @@ void main() {
 
     expect(recorder.recording, isFalse);
     expect(container.read(liveConversationProvider).isLive, isFalse);
+  });
+
+  test('ends the conversation when nobody speaks', () async {
+    final recorder = _FakeRecorder()..spoken = [-60, -60];
+    final conversation = _FakeConversation();
+    final container = _container(
+      conversation: conversation,
+      speech: _FakeSpeech(),
+      audio: _FakeAudio(),
+      recorder: recorder,
+      quietLimit: const Duration(milliseconds: 300),
+    );
+
+    await container.read(liveConversationProvider.notifier).start();
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+
+    final live = container.read(liveConversationProvider);
+    expect(live.isLive, isFalse);
+    expect(live.error, isNull);
+    expect(recorder.recording, isFalse);
+    expect(conversation.asked, 0);
   });
 }

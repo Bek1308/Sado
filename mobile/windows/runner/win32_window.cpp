@@ -146,6 +146,12 @@ bool Win32Window::Create(const std::wstring& title,
 
   UpdateTheme(window);
 
+  // Sado's window has no frame; ask Windows 11 to round its corners anyway.
+  // Older Windows ignores this attribute.
+  const DWORD kCornerPreference = 33;  // DWMWA_WINDOW_CORNER_PREFERENCE
+  const DWORD kRound = 2;              // DWMWCP_ROUND
+  DwmSetWindowAttribute(window, kCornerPreference, &kRound, sizeof(kRound));
+
   return OnCreate();
 }
 

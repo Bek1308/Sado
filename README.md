@@ -71,7 +71,7 @@ Camera-first: understand any paper, in any language, in seconds.
 
 ## 💻 Sado on your computer
 
-The same app runs on Windows as a quiet companion in the tray. Press **Ctrl+Alt+Space** in any app and just talk; a small window shows Sado's face and a live voice wave while it listens, thinks and answers, then slips away.
+The same app runs on Windows as a quiet companion in the tray. Nothing sits on screen until you call it: press **Ctrl+Alt+S** in any app and just talk. Only a slim bar with a live voice wave appears while Sado listens, thinks and answers, and it slips away when the conversation ends. Click the tray icon for the full window.
 
 Sado can see and drive the computer: list and read windows, open apps and links, type into a window and run commands. It reads a terminal's latest output, so it can tell you what a coding agent such as Muse Code just finished and hand it the next task by voice.
 

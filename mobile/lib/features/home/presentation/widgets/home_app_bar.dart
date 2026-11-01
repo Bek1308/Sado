@@ -9,6 +9,7 @@ import 'package:sado/core/theme/app_theme.dart';
 import 'package:sado/core/widgets/sado_orb.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/providers/live_providers.dart';
+import 'package:sado/features/desktop/presentation/providers/desktop_view_providers.dart';
 import 'package:sado/features/listening/presentation/providers/listening_providers.dart';
 import 'package:sado/features/server_status/presentation/providers/server_status_providers.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
@@ -64,10 +65,11 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onPressed: () => showVoiceStyleSheet(context),
         ),
         if (ref.watch(isDesktopProvider))
-          const IconButton(
+          IconButton(
             tooltip: 'Hide to tray',
-            icon: Icon(Icons.remove_rounded),
-            onPressed: DesktopHost.hide,
+            icon: const Icon(Icons.remove_rounded),
+            onPressed: () => ref.read(desktopViewProvider.notifier).current =
+                DesktopView.hidden,
           ),
         const SizedBox(width: AppSpacing.sm),
       ],

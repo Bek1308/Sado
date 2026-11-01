@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/features/home/presentation/pages/home_page.dart';
 import 'package:sado/features/memory/presentation/pages/memories_page.dart';
 import 'package:sado/features/onboarding/presentation/pages/onboarding_page.dart';
@@ -15,7 +16,11 @@ final appRouterProvider = Provider<GoRouter>(
   (ref) => GoRouter(
     redirect: (context, state) {
       final onWelcome = state.matchedLocation == AppRoutes.welcome;
-      if (!ref.read(onboardingDoneProvider) && !onWelcome) {
+      // The phone walkthrough has no place on a computer, where Sado waits
+      // hidden in the tray.
+      final needsWelcome =
+          !ref.read(isDesktopProvider) && !ref.read(onboardingDoneProvider);
+      if (needsWelcome && !onWelcome) {
         return AppRoutes.welcome;
       }
       return null;
