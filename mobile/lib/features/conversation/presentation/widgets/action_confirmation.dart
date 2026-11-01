@@ -77,6 +77,10 @@ class ActionConfirmation extends ConsumerWidget {
               spacing: AppSpacing.sm,
               children: [
                 OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.onPrimaryContainer,
+                    side: BorderSide(color: colors.onPrimaryContainer),
+                  ),
                   onPressed: busy ? null : () => _answer(ref, yes: false),
                   child: const Text('No'),
                 ),

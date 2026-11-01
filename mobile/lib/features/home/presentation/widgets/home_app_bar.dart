@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/core/error/result.dart';
 import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
@@ -12,6 +13,7 @@ import 'package:sado/features/listening/presentation/providers/listening_provide
 import 'package:sado/features/server_status/presentation/providers/server_status_providers.dart';
 import 'package:sado/features/speech/presentation/providers/speech_providers.dart';
 import 'package:sado/features/speech/presentation/widgets/voice_style_sheet.dart';
+import 'package:window_manager/window_manager.dart';
 
 class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const HomeAppBar({super.key});
@@ -29,7 +31,7 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
     );
 
-    return AppBar(
+    final bar = AppBar(
       toolbarHeight: _height,
       titleSpacing: AppSpacing.lg,
       title: const Row(
@@ -61,9 +63,18 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.tune),
           onPressed: () => showVoiceStyleSheet(context),
         ),
+        if (ref.watch(isDesktopProvider))
+          const IconButton(
+            tooltip: 'Hide to tray',
+            icon: Icon(Icons.remove_rounded),
+            onPressed: DesktopHost.hide,
+          ),
         const SizedBox(width: AppSpacing.sm),
       ],
     );
+    // The window has no title bar of its own on a computer; Sado's is the
+    // handle to move it around.
+    return ref.watch(isDesktopProvider) ? DragToMoveArea(child: bar) : bar;
   }
 }
 

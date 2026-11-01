@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
@@ -8,6 +9,7 @@ import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/widgets/action_confirmation.dart';
 import 'package:sado/features/conversation/presentation/widgets/conversation_view.dart';
+import 'package:sado/features/desktop/presentation/widgets/desktop_stage.dart';
 import 'package:sado/features/home/presentation/widgets/composer.dart';
 import 'package:sado/features/home/presentation/widgets/home_app_bar.dart';
 import 'package:sado/features/listening/presentation/providers/listening_providers.dart';
@@ -27,12 +29,13 @@ class HomePage extends ConsumerWidget {
       // its height and only the input moves.
       resizeToAvoidBottomInset: false,
       appBar: const HomeAppBar(),
-      body: const _ContentWidth(
+      body: _ContentWidth(
         child: Column(
           children: [
-            ServerStatusBanner(),
-            Expanded(child: ConversationView()),
-            ActionConfirmation(),
+            if (ref.watch(isDesktopProvider)) const DesktopStage(),
+            const ServerStatusBanner(),
+            const Expanded(child: ConversationView()),
+            const ActionConfirmation(),
           ],
         ),
       ),

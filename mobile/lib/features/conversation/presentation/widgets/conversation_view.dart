@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
@@ -43,12 +44,14 @@ class ConversationView extends ConsumerWidget {
   }
 }
 
-class _Welcome extends StatelessWidget {
+class _Welcome extends ConsumerWidget {
   const _Welcome();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // On a computer the stage above already shows Sado's face.
+    final showFace = !ref.watch(isDesktopProvider);
 
     return Center(
       child: SingleChildScrollView(
@@ -56,8 +59,10 @@ class _Welcome extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SadoFace(),
-            const SizedBox(height: AppSpacing.xxl),
+            if (showFace) ...[
+              const SadoFace(),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
             Text(
               'One voice. Every language.',
               style: theme.textTheme.headlineSmall?.copyWith(
