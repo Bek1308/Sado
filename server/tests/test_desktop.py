@@ -142,6 +142,7 @@ class _Model:
     def __init__(self, *turns: ModelTurn) -> None:
         self._turns = list(turns)
         self.instructions: list[str] = []
+        self.tools: list[Sequence[ToolSpec]] = []
 
     def respond(
         self,
@@ -151,6 +152,7 @@ class _Model:
         steps: Sequence[ToolStep],
     ) -> ModelTurn:
         self.instructions.append(instructions)
+        self.tools.append(tools)
         return self._turns.pop(0)
 
 
@@ -202,6 +204,7 @@ def test_sado_asks_before_typing_and_reports_after_the_yes() -> None:
     assert done.json()["reply"] == "Bo'ldi, agent ishga tushdi."
     assert desktop.typed == [(11, "write the README")]
     assert "Typed into 'Muse Code - Sado'." in model.instructions[-1]
+    assert model.tools[-1] == [], "reporting must not offer tools that could queue it again"
     again = client.post(
         f"/actions/{action_id}/confirm", json={"language": "uz", "messages": conversation}
     )

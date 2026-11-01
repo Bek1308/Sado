@@ -24,10 +24,17 @@ _WINDOW = {
 }
 
 
+# Asking twice, once in words and once in the app, annoys people; only the app asks.
+_CONFIRM = (
+    "Call it as soon as the user asks: Sado's app then asks them to confirm before "
+    "anything happens, so do not ask for permission yourself first."
+)
+
+
 def _spec(name: str, description: str, **properties: object) -> ToolSpec:
     return ToolSpec(
         name=name,
-        description=description,
+        description=description.replace("{confirm}", _CONFIRM),
         parameters={
             "type": "object",
             "properties": properties,
@@ -55,17 +62,15 @@ OPEN = _spec(
 TYPE_INTO_WINDOW = _spec(
     "type_into_window",
     "Type text into a window and press Enter, e.g. give an agent in a terminal a new task. "
-    "Needs the user's confirmation.",
+    "{confirm}",
     window=_WINDOW,
     text={"type": "string", "description": "Exactly what to type."},
 )
-CLOSE_WINDOW = _spec(
-    "close_window", "Close a window. Needs the user's confirmation.", window=_WINDOW
-)
+CLOSE_WINDOW = _spec("close_window", "Close a window. {confirm}", window=_WINDOW)
 RUN_COMMAND = _spec(
     "run_command",
-    "Run a PowerShell command on the computer and get its output. Needs the user's "
-    "confirmation; prefer the other tools when they can do the job.",
+    "Run a PowerShell command on the computer and get its output; prefer the other tools "
+    "when they can do the job. {confirm}",
     command={"type": "string", "description": "The PowerShell command."},
 )
 

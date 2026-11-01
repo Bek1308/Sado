@@ -196,13 +196,19 @@ class Converse:
                 f"{instructions}\n\nThe user confirmed the action and it ran. What "
                 f"happened:\n{action_result}\nTell them briefly how it went."
             )
-        tools = [
-            *([REMEMBER] if self._memories else []),
-            *([REMIND] if self._reminders else []),
-            *([SEARCH_WEB] if self._web_search else []),
-            *(LIST_TOOLS if self._lists else ()),
-            *(DESKTOP_TOOLS if self._desktop else ()),
-        ]
+        # Reporting a finished action needs no tools; offering them invites the model
+        # to queue the same action again.
+        tools = (
+            []
+            if action_result is not None
+            else [
+                *([REMEMBER] if self._memories else []),
+                *([REMIND] if self._reminders else []),
+                *([SEARCH_WEB] if self._web_search else []),
+                *(LIST_TOOLS if self._lists else ()),
+                *(DESKTOP_TOOLS if self._desktop else ()),
+            ]
+        )
         steps: list[ToolStep] = []
         outcome = _Outcome()
 
