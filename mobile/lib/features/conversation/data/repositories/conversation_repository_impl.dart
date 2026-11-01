@@ -18,9 +18,34 @@ final class ConversationRepositoryImpl implements ConversationRepository {
     List<ChatMessage> conversation,
     SpokenLanguage language,
     SadoMode mode,
-  ) async {
+  ) {
+    return _guard(
+      () => _remoteDataSource.reply(conversation, language, mode),
+    );
+  }
+
+  @override
+  Future<Result<SadoReply>> confirmAction(
+    String actionId,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
+  ) => _guard(
+    () => _remoteDataSource.confirmAction(
+      actionId,
+      conversation,
+      language,
+      mode,
+    ),
+  );
+
+  @override
+  Future<Result<void>> cancelAction(String actionId) =>
+      _guard(() => _remoteDataSource.cancelAction(actionId));
+
+  Future<Result<T>> _guard<T>(Future<T> Function() request) async {
     try {
-      return Ok(await _remoteDataSource.reply(conversation, language, mode));
+      return Ok(await request());
     } on DioException catch (error) {
       return Err(error.toFailure());
     }

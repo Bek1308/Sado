@@ -11,4 +11,15 @@ abstract interface class ConversationRepository {
     SpokenLanguage language,
     SadoMode mode,
   );
+
+  /// Runs the action the user agreed to; [conversation] ends with their yes.
+  /// Returns Sado's report of how it went.
+  Future<Result<SadoReply>> confirmAction(
+    String actionId,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
+  );
+
+  Future<Result<void>> cancelAction(String actionId);
 }

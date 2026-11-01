@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
+import 'package:sado/features/conversation/domain/entities/pending_action.dart';
 import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
@@ -8,6 +9,7 @@ class ConversationRemoteDataSource {
   const ConversationRemoteDataSource(this._httpClient);
 
   static const _repliesPath = '/replies';
+  static const _actionsPath = '/actions';
 
   final Dio _httpClient;
 
@@ -15,9 +17,26 @@ class ConversationRemoteDataSource {
     List<ChatMessage> conversation,
     SpokenLanguage language,
     SadoMode mode,
+  ) => _post(_repliesPath, conversation, language, mode);
+
+  Future<SadoReply> confirmAction(
+    String actionId,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
+  ) => _post('$_actionsPath/$actionId/confirm', conversation, language, mode);
+
+  Future<void> cancelAction(String actionId) =>
+      _httpClient.post<void>('$_actionsPath/$actionId/cancel');
+
+  Future<SadoReply> _post(
+    String path,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
   ) async {
     final response = await _httpClient.post<Map<String, dynamic>>(
-      _repliesPath,
+      path,
       data: {
         'language': language.code,
         'mode': mode.code,
@@ -29,7 +48,11 @@ class ConversationRemoteDataSource {
         ],
       },
     );
-    final data = response.data!;
+    return _reply(response.data!);
+  }
+
+  SadoReply _reply(Map<String, dynamic> data) {
+    final pending = data['pending_action'] as Map<String, dynamic>?;
     return SadoReply(
       text: data['reply'] as String,
       // Older servers did not report what Sado remembered or set.
@@ -42,6 +65,12 @@ class ConversationRemoteDataSource {
           reminder as String,
       ],
       listsChanged: data['lists_changed'] as bool? ?? false,
+      pendingAction: pending == null
+          ? null
+          : PendingAction(
+              id: pending['id'] as String,
+              description: pending['description'] as String,
+            ),
     );
   }
 }

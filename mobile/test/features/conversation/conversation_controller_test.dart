@@ -30,6 +30,17 @@ final class _FakeRepository implements ConversationRepository {
     modes.add(mode);
     return result;
   }
+
+  @override
+  Future<Result<SadoReply>> confirmAction(
+    String actionId,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
+  ) async => const Ok(SadoReply(text: 'Done'));
+
+  @override
+  Future<Result<void>> cancelAction(String actionId) async => const Ok(null);
 }
 
 ProviderContainer _container(_FakeRepository repository) {

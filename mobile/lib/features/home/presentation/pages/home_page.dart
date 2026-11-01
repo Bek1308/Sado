@@ -6,6 +6,7 @@ import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
+import 'package:sado/features/conversation/presentation/widgets/action_confirmation.dart';
 import 'package:sado/features/conversation/presentation/widgets/conversation_view.dart';
 import 'package:sado/features/home/presentation/widgets/composer.dart';
 import 'package:sado/features/home/presentation/widgets/home_app_bar.dart';
@@ -31,6 +32,7 @@ class HomePage extends ConsumerWidget {
           children: [
             ServerStatusBanner(),
             Expanded(child: ConversationView()),
+            ActionConfirmation(),
           ],
         ),
       ),

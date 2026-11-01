@@ -77,6 +77,17 @@ final class _FakeConversation implements ConversationRepository {
     if (asked == 1) await firstAnswerGate?.future;
     return const Ok(SadoReply(text: 'Salom!'));
   }
+
+  @override
+  Future<Result<SadoReply>> confirmAction(
+    String actionId,
+    List<ChatMessage> conversation,
+    SpokenLanguage language,
+    SadoMode mode,
+  ) async => const Ok(SadoReply(text: 'Done'));
+
+  @override
+  Future<Result<void>> cancelAction(String actionId) async => const Ok(null);
 }
 
 final class _FakeSpeech implements SpeechRepository {
