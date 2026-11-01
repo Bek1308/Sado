@@ -2,6 +2,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta, timezone, tzinfo
 
+from sado.application.desktop_tools import (
+    DESKTOP_TOOL_NAMES,
+    DESKTOP_TOOLS,
+    DesktopTools,
+    PendingAction,
+)
 from sado.application.list_tools import LIST_TOOLS, run_list_tool
 from sado.application.lists import Lists
 from sado.application.memories import Memories
@@ -116,6 +122,8 @@ class Reply:
     """Reminders Sado set while answering, so the app can show them."""
     lists_changed: bool = False
     """Whether Sado changed a list while answering, so the app can refresh it."""
+    pending_action: PendingAction | None = None
+    """An action on the user's computer that waits for their yes."""
 
 
 @dataclass(slots=True)
@@ -125,29 +133,33 @@ class _Outcome:
     remembered: list[str] = field(default_factory=list)
     reminded: list[str] = field(default_factory=list)
     lists_changed: bool = False
+    pending_action: PendingAction | None = None
 
     @property
     def acted(self) -> bool:
-        return bool(self.remembered or self.reminded or self.lists_changed)
+        return bool(self.remembered or self.reminded or self.lists_changed or self.pending_action)
 
 
 class Converse:
     # Sado only needs a couple of tool rounds; more means the model is stuck in a loop.
     _MAX_TOOL_STEPS = 3
 
-    def __init__(
+    # Each ability is optional and independent, so they stay plain arguments.
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         reasoning_model: ReasoningModel,
         memories: Memories | None = None,
         reminders: Reminders | None = None,
         web_search: WebSearch | None = None,
         lists: Lists | None = None,
+        desktop: DesktopTools | None = None,
     ) -> None:
         self._reasoning_model = reasoning_model
         self._memories = memories
         self._reminders = reminders
         self._web_search = web_search
         self._lists = lists
+        self._desktop = desktop
 
     def execute(
         self,
@@ -155,7 +167,13 @@ class Converse:
         language: Language,
         mode: Mode = Mode.PERSONAL,
         utc_offset: timedelta = timedelta(0),
+        action_result: str | None = None,
     ) -> Reply:
+        """Answers the last user message.
+
+        `action_result` is what a computer action did after the user confirmed it, so Sado
+        can tell them how it went.
+        """
         if not conversation:
             raise NothingToAnswerError
         last = conversation[-1]
@@ -173,11 +191,17 @@ class Converse:
             mode,
             moment,
         )
+        if action_result is not None:
+            instructions = (
+                f"{instructions}\n\nThe user confirmed the action and it ran. What "
+                f"happened:\n{action_result}\nTell them briefly how it went."
+            )
         tools = [
             *([REMEMBER] if self._memories else []),
             *([REMIND] if self._reminders else []),
             *([SEARCH_WEB] if self._web_search else []),
             *(LIST_TOOLS if self._lists else ()),
+            *(DESKTOP_TOOLS if self._desktop else ()),
         ]
         steps: list[ToolStep] = []
         outcome = _Outcome()
@@ -193,6 +217,7 @@ class Converse:
                     remembered=tuple(outcome.remembered),
                     reminded=tuple(outcome.reminded),
                     lists_changed=outcome.lists_changed,
+                    pending_action=outcome.pending_action,
                 )
             steps.append(
                 ToolStep(results=tuple(self._run(call, outcome, zone) for call in turn.calls))
@@ -213,6 +238,11 @@ class Converse:
             return self._set_reminder(self._reminders, call, outcome, zone)
         if call.name == SEARCH_WEB.name and self._web_search is not None:
             return self._search(self._web_search, call)
+        if self._desktop is not None and call.name in DESKTOP_TOOL_NAMES:
+            result, pending = self._desktop.run(call)
+            # One question at a time: a newer request replaces the one before it.
+            outcome.pending_action = pending or outcome.pending_action
+            return result
         if self._lists is not None and call.name in _LIST_TOOL_NAMES:
             result, changed = run_list_tool(self._lists, call)
             outcome.lists_changed = outcome.lists_changed or changed

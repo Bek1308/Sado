@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     omnivoice_uzbek_code: str = "uz"
     default_voice: str = "sado"
     warm_up_voices: bool = True
+    # Off unless the owner turns it on: Sado may then read and drive this computer's
+    # windows, always asking before it types, closes or runs anything.
+    desktop_control: bool = False
     mood_reference_dir: str = "data/voices"
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0

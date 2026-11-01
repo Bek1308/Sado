@@ -24,6 +24,9 @@ speech = [
     "torchaudio>=2.11.0",
     "transformers>=5.21.0",
 ]
+desktop = [
+    "uiautomation>=2.0.20 ; sys_platform == 'win32'",
+]
 
 [dependency-groups]
 dev = [
@@ -71,7 +74,7 @@ mypy_path = "src"
 packages = ["sado"]
 
 [[tool.mypy.overrides]]
-module = ["num2words", "olefile", "omnivoice", "openpyxl", "torch", "transformers", "xlrd"]
+module = ["num2words", "olefile", "omnivoice", "openpyxl", "torch", "transformers", "uiautomation", "xlrd"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

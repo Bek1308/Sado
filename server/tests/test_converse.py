@@ -69,6 +69,7 @@ def test_replies_endpoint_returns_sado_answer() -> None:
         "remembered": [],
         "reminded": [],
         "lists_changed": False,
+        "pending_action": None,
     }
 
 

@@ -40,11 +40,18 @@ class ReplyRequest(BaseModel):
     messages: list[MessageModel] = Field(min_length=1, max_length=_MAX_MESSAGES)
 
 
+class PendingActionModel(BaseModel):
+    id: str
+    description: str
+
+
 class ReplyResponse(BaseModel):
     reply: str
     remembered: list[str]
     reminded: list[str]
     lists_changed: bool
+    pending_action: PendingActionModel | None = None
+    """Something Sado wants to do on the computer; it runs only after the user's yes."""
 
 
 @router.post("")
@@ -52,16 +59,27 @@ def reply(
     request: ReplyRequest,
     converse: Annotated[Converse, Depends(get_converse)],
 ) -> ReplyResponse:
+    return answer(request, converse)
+
+
+def answer(
+    request: ReplyRequest, converse: Converse, action_result: str | None = None
+) -> ReplyResponse:
     conversation = [Message(message.speaker, message.text) for message in request.messages]
-    answer = converse.execute(
+    reply = converse.execute(
         conversation,
         request.language,
         request.mode,
         timedelta(minutes=request.utc_offset_minutes),
+        action_result,
     )
+    pending = reply.pending_action
     return ReplyResponse(
-        reply=answer.text,
-        remembered=list(answer.remembered),
-        reminded=list(answer.reminded),
-        lists_changed=answer.lists_changed,
+        reply=reply.text,
+        remembered=list(reply.remembered),
+        reminded=list(reply.reminded),
+        lists_changed=reply.lists_changed,
+        pending_action=(
+            PendingActionModel(id=pending.id, description=pending.description) if pending else None
+        ),
     )

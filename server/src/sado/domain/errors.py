@@ -122,3 +122,15 @@ class UnnamedListError(SadoError):
 class UnknownListItemError(SadoError):
     def __init__(self, item_id: str) -> None:
         super().__init__(f"No list item with id '{item_id}'")
+
+
+class DesktopUnavailableError(SadoError):
+    """The computer could not be controlled, e.g. the window vanished mid-action."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(f"The computer could not do that: {reason}")
+
+
+class UnknownActionError(SadoError):
+    def __init__(self, action_id: str) -> None:
+        super().__init__(f"No action waiting with id '{action_id}'")

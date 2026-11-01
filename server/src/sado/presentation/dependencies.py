@@ -3,6 +3,7 @@ from typing import cast
 from fastapi import Request
 
 from sado.application.converse import Converse
+from sado.application.desktop_tools import PendingActions
 from sado.application.explain_document import ExplainDocument
 from sado.application.lists import Lists
 from sado.application.memories import Memories
@@ -18,6 +19,10 @@ def get_converse(request: Request) -> Converse:
 
 def get_explain_document(request: Request) -> ExplainDocument:
     return cast(ExplainDocument, request.app.state.explain_document)
+
+
+def get_pending_actions(request: Request) -> PendingActions:
+    return cast(PendingActions, request.app.state.pending_actions)
 
 
 def get_lists(request: Request) -> Lists:

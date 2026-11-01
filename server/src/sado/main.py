@@ -12,6 +12,7 @@ import httpx
 from fastapi import FastAPI
 
 from sado.application.converse import Converse
+from sado.application.desktop_tools import DesktopTools, PendingActions
 from sado.application.explain_document import ExplainDocument
 from sado.application.lists import Lists
 from sado.application.memories import Memories
@@ -20,6 +21,7 @@ from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
+from sado.domain.desktop import Desktop
 from sado.domain.errors import SadoError
 from sado.domain.language import Language
 from sado.domain.lists import ListStore
@@ -42,6 +44,7 @@ from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import (
+    actions,
     explanations,
     health,
     lists,
@@ -79,6 +82,15 @@ def _voice_config(settings: Settings) -> VoiceConfig:
         asr_url=settings.asr_url,
         asr_timeout_seconds=settings.asr_timeout_seconds,
     )
+
+
+def _desktop(settings: Settings) -> Desktop | None:
+    if not settings.desktop_control:
+        return None
+    # Imported only when asked for: it needs Windows and the optional `desktop` extra.
+    from sado.infrastructure.desktop.windows_desktop import WindowsDesktop  # noqa: PLC0415
+
+    return WindowsDesktop()
 
 
 def _model_api(settings: Settings) -> httpx.Client | None:
@@ -154,6 +166,7 @@ def create_app(  # noqa: PLR0913
     reminder_store: ReminderStore | None = None,
     web_search: WebSearch | None = None,
     list_store: ListStore | None = None,
+    desktop: Desktop | None = None,
 ) -> FastAPI:
     settings = get_settings()
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
@@ -182,7 +195,11 @@ def create_app(  # noqa: PLR0913
     search = web_search or _web_search(settings, model_api)
     shopping = Lists(list_store or SqliteListStore(settings.memory_db_path))
     app.state.lists = shopping
-    app.state.converse = Converse(model, saved, alarms, search, shopping)
+    pending_actions = PendingActions()
+    app.state.pending_actions = pending_actions
+    computer = desktop or _desktop(settings)
+    hands = DesktopTools(computer, pending_actions) if computer else None
+    app.state.converse = Converse(model, saved, alarms, search, shopping, hands)
     # Vision reuses the same thinker; a custom text-only reasoner keeps talking
     # while document explanations report the service as unavailable.
     if document_explainer is None:
@@ -204,6 +221,7 @@ def create_app(  # noqa: PLR0913
     app.include_router(memories.router)
     app.include_router(reminders.router)
     app.include_router(lists.router)
+    app.include_router(actions.router)
     return app
 
 
