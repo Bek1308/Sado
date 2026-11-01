@@ -12,11 +12,16 @@ import 'package:sado/features/conversation/domain/repositories/conversation_repo
 import 'package:sado/features/conversation/domain/usecases/ask_sado.dart';
 import 'package:sado/features/lists/presentation/providers/list_providers.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
+import 'package:sado/features/phone/domain/entities/phone_outcome_message.dart';
+import 'package:sado/features/phone/presentation/providers/phone_providers.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 final conversationRepositoryProvider = Provider<ConversationRepository>(
   (ref) => ConversationRepositoryImpl(
-    ConversationRemoteDataSource(ref.watch(httpClientProvider)),
+    ConversationRemoteDataSource(
+      ref.watch(httpClientProvider),
+      canActOnPhone: ref.watch(phoneControlProvider).supported,
+    ),
   ),
 );
 
@@ -90,6 +95,7 @@ class ConversationController extends Notifier<ConversationState> {
         case Consent.yes:
           return _send(
             text,
+            language,
             (context) =>
                 repository.confirmAction(pending.id, context, language, mode),
           );
@@ -101,6 +107,7 @@ class ConversationController extends Notifier<ConversationState> {
     }
     return _send(
       text,
+      language,
       (context) => ref.read(askSadoProvider).call(context, language, mode),
     );
   }
@@ -114,6 +121,7 @@ class ConversationController extends Notifier<ConversationState> {
 
   Future<SadoReply?> _send(
     String text,
+    SpokenLanguage language,
     Future<Result<SadoReply>> Function(List<ChatMessage> context) request,
   ) async {
     final messages = [
@@ -128,7 +136,8 @@ class ConversationController extends Notifier<ConversationState> {
     final result = await request(context);
 
     switch (result) {
-      case Ok(:final value):
+      case Ok(value: final answer):
+        final value = await _actOnPhone(answer, language);
         state = ConversationState(
           messages: [
             ...messages,
@@ -145,6 +154,21 @@ class ConversationController extends Notifier<ConversationState> {
         state = ConversationState(messages: messages, error: failure.message);
         return null;
     }
+  }
+
+  /// Carries out what Sado asked the phone to do. If the phone could not,
+  /// Sado says so instead of claiming it did.
+  Future<SadoReply> _actOnPhone(
+    SadoReply reply,
+    SpokenLanguage language,
+  ) async {
+    final phone = ref.read(phoneControlProvider);
+    for (final action in reply.phoneActions) {
+      final outcome = await phone.perform(action);
+      final problem = phoneOutcomeMessage(outcome, action, language);
+      if (problem != null) return reply.saying(problem);
+    }
+    return reply;
   }
 
   Future<SadoReply> _cancel(

@@ -12,6 +12,7 @@ from sado.application.list_tools import LIST_TOOLS, run_list_tool
 from sado.application.lists import Lists
 from sado.application.memories import Memories
 from sado.application.persona import persona_instructions
+from sado.application.phone_tools import PHONE_TOOL_NAMES, PHONE_TOOLS, run_phone_tool
 from sado.application.reminders import Reminders
 from sado.domain.conversation import (
     Answer,
@@ -26,6 +27,7 @@ from sado.domain.conversation import (
 from sado.domain.errors import NothingToAnswerError, ReasoningUnavailableError, SadoError
 from sado.domain.language import Language
 from sado.domain.mode import Mode
+from sado.domain.phone import PhoneAction
 from sado.domain.reminder import Reminder
 from sado.domain.search import WebSearch
 
@@ -105,6 +107,13 @@ def reminder_label(reminder: Reminder, zone: tzinfo = UTC) -> str:
     return f"{reminder.text} ({reminder.due_at.astimezone(zone):%d %b, %H:%M})"
 
 
+_ON_THE_PHONE = (
+    "The user is talking to you on their phone, and your phone_ tools act on it: call "
+    "or message people, set alarms and timers, open apps, show the way, switch the "
+    "flashlight. When they ask for one of these, use the tool instead of explaining how "
+    "to do it themselves."
+)
+
 _DONE = {
     Language.UZBEK: "Bo'ldi.",
     Language.TAJIK: "Шуд.",
@@ -124,6 +133,8 @@ class Reply:
     """Whether Sado changed a list while answering, so the app can refresh it."""
     pending_action: PendingAction | None = None
     """An action on the user's computer that waits for their yes."""
+    phone_actions: tuple[PhoneAction, ...] = field(default=())
+    """What the user's phone should do now, e.g. open the dialer."""
 
 
 @dataclass(slots=True)
@@ -134,10 +145,17 @@ class _Outcome:
     reminded: list[str] = field(default_factory=list)
     lists_changed: bool = False
     pending_action: PendingAction | None = None
+    phone_actions: list[PhoneAction] = field(default_factory=list)
 
     @property
     def acted(self) -> bool:
-        return bool(self.remembered or self.reminded or self.lists_changed or self.pending_action)
+        return bool(
+            self.remembered
+            or self.reminded
+            or self.lists_changed
+            or self.pending_action
+            or self.phone_actions
+        )
 
 
 class Converse:
@@ -171,12 +189,14 @@ class Converse:
         action_result: str | None = None,
         *,
         allow_desktop: bool = False,
+        phone: bool = False,
     ) -> Reply:
         """Answers the last user message.
 
         `action_result` is what a computer action did after the user confirmed it, so Sado
         can tell them how it went. `allow_desktop` is set only for requests from a device
-        trusted to control the computer.
+        trusted to control the computer. `phone` is set when the user talks from a phone
+        that can carry out phone actions.
         """
         if not conversation:
             raise NothingToAnswerError
@@ -200,6 +220,8 @@ class Converse:
                 f"{instructions}\n\nThe user confirmed the action and it ran. What "
                 f"happened:\n{action_result}\nTell them briefly how it went."
             )
+        elif phone:
+            instructions = f"{instructions}\n\n{_ON_THE_PHONE}"
         # Reporting a finished action needs no tools; offering them invites the model
         # to queue the same action again.
         tools = (
@@ -211,6 +233,7 @@ class Converse:
                 *([SEARCH_WEB] if self._web_search else []),
                 *(LIST_TOOLS if self._lists else ()),
                 *(DESKTOP_TOOLS if self._desktop and allow_desktop else ()),
+                *(PHONE_TOOLS if phone else ()),
             ]
         )
         steps: list[ToolStep] = []
@@ -228,6 +251,7 @@ class Converse:
                     reminded=tuple(outcome.reminded),
                     lists_changed=outcome.lists_changed,
                     pending_action=outcome.pending_action,
+                    phone_actions=tuple(outcome.phone_actions),
                 )
             steps.append(
                 ToolStep(results=tuple(self._run(call, outcome, zone) for call in turn.calls))
@@ -248,16 +272,27 @@ class Converse:
             return self._set_reminder(self._reminders, call, outcome, zone)
         if call.name == SEARCH_WEB.name and self._web_search is not None:
             return self._search(self._web_search, call)
-        if self._desktop is not None and call.name in DESKTOP_TOOL_NAMES:
-            result, pending = self._desktop.run(call)
-            # One question at a time: a newer request replaces the one before it.
-            outcome.pending_action = pending or outcome.pending_action
-            return result
+        if (acted := self._act_on_device(call, outcome)) is not None:
+            return acted
         if self._lists is not None and call.name in _LIST_TOOL_NAMES:
             result, changed = run_list_tool(self._lists, call)
             outcome.lists_changed = outcome.lists_changed or changed
             return result
         return ToolResult(call, f"Unknown tool '{call.name}'.")
+
+    def _act_on_device(self, call: ToolCall, outcome: _Outcome) -> ToolResult | None:
+        """Runs a computer or phone tool, or returns None when `call` is neither."""
+        if self._desktop is not None and call.name in DESKTOP_TOOL_NAMES:
+            result, pending = self._desktop.run(call)
+            # One question at a time: a newer request replaces the one before it.
+            outcome.pending_action = pending or outcome.pending_action
+            return result
+        if call.name in PHONE_TOOL_NAMES:
+            result, action = run_phone_tool(call)
+            if action is not None:
+                outcome.phone_actions.append(action)
+            return result
+        return None
 
     @staticmethod
     def _save_memory(memories: Memories, call: ToolCall, outcome: _Outcome) -> ToolResult:

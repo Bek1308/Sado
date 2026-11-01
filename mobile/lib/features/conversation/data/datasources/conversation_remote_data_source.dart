@@ -3,15 +3,23 @@ import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/domain/entities/pending_action.dart';
 import 'package:sado/features/conversation/domain/entities/sado_mode.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
+import 'package:sado/features/phone/domain/entities/phone_action.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
 
 class ConversationRemoteDataSource {
-  const ConversationRemoteDataSource(this._httpClient);
+  const ConversationRemoteDataSource(
+    this._httpClient, {
+    this.canActOnPhone = false,
+  });
 
   static const _repliesPath = '/replies';
   static const _actionsPath = '/actions';
 
   final Dio _httpClient;
+
+  /// Whether this app can call, message or set alarms on the phone it runs
+  /// on, so Sado may offer to.
+  final bool canActOnPhone;
 
   Future<SadoReply> reply(
     List<ChatMessage> conversation,
@@ -42,6 +50,7 @@ class ConversationRemoteDataSource {
         'mode': mode.code,
         // Lets Sado read "tomorrow at 9" on the user's own clock.
         'utc_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
+        'phone': canActOnPhone,
         'messages': [
           for (final message in conversation)
             {'speaker': message.speaker.code, 'text': message.text},
@@ -71,6 +80,16 @@ class ConversationRemoteDataSource {
               id: pending['id'] as String,
               description: pending['description'] as String,
             ),
+      phoneActions: [
+        for (final action
+            in data['phone_actions'] as List<dynamic>? ?? const [])
+          PhoneAction(
+            kind: (action as Map<String, dynamic>)['kind'] as String,
+            details: (action['details'] as Map<String, dynamic>).map(
+              (key, value) => MapEntry(key, value as String),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -70,6 +70,7 @@ def test_replies_endpoint_returns_sado_answer() -> None:
         "reminded": [],
         "lists_changed": False,
         "pending_action": None,
+        "phone_actions": [],
     }
 
 

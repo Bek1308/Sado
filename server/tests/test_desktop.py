@@ -107,7 +107,9 @@ def test_changing_things_only_waits_for_a_yes(call: ToolCall) -> None:
 
     assert waiting is not None
     assert "Do not say it is done" in result.output
-    assert desktop.typed == desktop.closed == desktop.commands == []
+    assert desktop.typed == []
+    assert desktop.closed == []
+    assert desktop.commands == []
 
 
 def test_a_confirmed_action_runs_once() -> None:

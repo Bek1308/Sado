@@ -38,11 +38,18 @@ class ReplyRequest(BaseModel):
     )
     """The user's clock, so "tomorrow at 9" means their 9 o'clock."""
     messages: list[MessageModel] = Field(min_length=1, max_length=_MAX_MESSAGES)
+    phone: bool = False
+    """Set by a phone app that can carry out phone actions such as calls and alarms."""
 
 
 class PendingActionModel(BaseModel):
     id: str
     description: str
+
+
+class PhoneActionModel(BaseModel):
+    kind: str
+    details: dict[str, str]
 
 
 class ReplyResponse(BaseModel):
@@ -52,6 +59,8 @@ class ReplyResponse(BaseModel):
     lists_changed: bool
     pending_action: PendingActionModel | None = None
     """Something Sado wants to do on the computer; it runs only after the user's yes."""
+    phone_actions: list[PhoneActionModel] = Field(default_factory=list)
+    """What the phone should do now, in order, e.g. open the dialer for a contact."""
 
 
 @router.post("")
@@ -78,6 +87,7 @@ def answer(
         timedelta(minutes=request.utc_offset_minutes),
         action_result,
         allow_desktop=allow_desktop,
+        phone=request.phone,
     )
     pending = reply.pending_action
     return ReplyResponse(
@@ -88,4 +98,8 @@ def answer(
         pending_action=(
             PendingActionModel(id=pending.id, description=pending.description) if pending else None
         ),
+        phone_actions=[
+            PhoneActionModel(kind=action.kind, details=dict(action.details))
+            for action in reply.phone_actions
+        ],
     )

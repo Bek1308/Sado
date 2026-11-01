@@ -76,7 +76,15 @@ The same app runs on Windows as a quiet companion in the tray. Nothing sits on s
 Sado can see and drive the computer: list and read windows, open apps and links, type into a window and run commands. It reads a terminal's latest output, so it can tell you what a coding agent such as Muse Code just finished and hand it the next task by voice.
 
 - **Looking is free, acting asks first.** Typing, closing windows and running commands wait for your yes, by voice or tap; each request is single-use and expires in five minutes, and the model can never confirm it itself.
-- **Only your computer's own app may drive it.** Computer control is off by default and needs a secret token that only the desktop build carries, so a phone or anyone reaching the server through a tunnel can never control the computer.
+- **Only your own devices may drive it.** Computer control is off by default and needs a secret token that only builds you make yourself carry: the desktop app, and your own phone if you want to run the computer from it. Anyone else reaching the server, even through a tunnel, can never control the computer.
+
+## 📱 Sado runs your phone
+
+On Android, Sado acts on the phone you are talking to: *"Call Mum"*, *"Text Aziz on WhatsApp that I'm ten minutes away"*, *"Wake me at 6:30"*, *"Set a 25-minute timer for the plov"*, *"Open Telegram"*, *"Show me the way to the airport"*, *"Turn on the flashlight"*.
+
+- **The phone's own screens do the work.** Sado opens the dialer or the message ready to go, and you press call or send, so nothing reaches another person without your tap. Alarms and timers go straight into the phone's clock.
+- **Your contacts stay on the phone.** The server only hears the name you said; the app finds the number on the device, matching Latin and Cyrillic spellings, so "Onam" finds "Онам".
+- **Honest when it can't.** If the contact or app is not there, Sado says so instead of pretending.
 
 ---
 
