@@ -5,7 +5,8 @@ from pathlib import Path
 import httpx
 
 from sado.domain.language import Language
-from sado.domain.speech import LanguagePack, SpeechSynthesizer, TextNormalizer
+from sado.domain.speech import LanguagePack, SpeechRecognizer, SpeechSynthesizer, TextNormalizer
+from sado.infrastructure.asr.muse_listener import FallbackRecognizer, MuseListener
 from sado.infrastructure.asr.omnilingual import OmnilingualRecognizer
 from sado.infrastructure.languages.english import build_english_normalizer
 from sado.infrastructure.languages.russian import build_russian_normalizer
@@ -61,7 +62,10 @@ class VoiceConfig:
     asr_timeout_seconds: float
 
 
-def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
+def build_language_packs(
+    config: VoiceConfig, model_api: httpx.Client | None = None, model: str = ""
+) -> dict[Language, LanguagePack]:
+    """`model_api` lets Muse listen when the Omnilingual worker cannot."""
     omnivoice = (
         OmniVoiceEngine(config.omnivoice_device, config.clone_quality)
         if config.use_omnivoice
@@ -73,10 +77,19 @@ def build_language_packs(config: VoiceConfig) -> dict[Language, LanguagePack]:
             language=language,
             normalizer=_NORMALIZERS[language],
             synthesizer=_build_synthesizer(language, config, omnivoice),
-            recognizer=OmnilingualRecognizer(asr_http, _OMNILINGUAL_CODES[language]),
+            recognizer=_build_recognizer(language, asr_http, model_api, model),
         )
         for language in Language
     }
+
+
+def _build_recognizer(
+    language: Language, asr_http: httpx.Client, model_api: httpx.Client | None, model: str
+) -> SpeechRecognizer:
+    omnilingual = OmnilingualRecognizer(asr_http, _OMNILINGUAL_CODES[language])
+    if model_api is None:
+        return omnilingual
+    return FallbackRecognizer(omnilingual, MuseListener(model_api, model, language))
 
 
 def _build_synthesizer(

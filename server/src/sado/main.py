@@ -179,7 +179,10 @@ def create_app(  # noqa: PLR0913
 ) -> FastAPI:
     settings = get_settings()
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
-    packs = language_packs or build_language_packs(_voice_config(settings))
+    model_api = _model_api(settings)
+    packs = language_packs or build_language_packs(
+        _voice_config(settings), model_api, settings.reasoning_model
+    )
     speak_text = SpeakText(packs, catalog)
 
     @asynccontextmanager
@@ -199,7 +202,6 @@ def create_app(  # noqa: PLR0913
     app.state.memories = saved
     alarms = Reminders(reminder_store or SqliteReminderStore(settings.memory_db_path))
     app.state.reminders = alarms
-    model_api = _model_api(settings)
     model = reasoning_model or _default_reasoning_model(settings, model_api)
     search = web_search or _web_search(settings, model_api)
     shopping = Lists(list_store or SqliteListStore(settings.memory_db_path))
