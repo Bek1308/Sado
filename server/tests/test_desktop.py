@@ -85,7 +85,8 @@ def test_looking_needs_no_permission() -> None:
 
     assert waiting is None
     assert "id 11: Muse Code - Sado (WindowsTerminal)" in listed.output
-    assert read.output == "Agent: I added the tests. All 12 pass."
+    assert read.output.endswith("\nAgent: I added the tests. All 12 pass.")
+    assert "newest output is at the very end" in read.output
     assert desktop.opened == ["https://youtube.com"]
 
 

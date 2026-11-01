@@ -165,7 +165,14 @@ class DesktopTools:
     def _read(self, call: ToolCall) -> tuple[ToolResult, None]:
         window = self._find(_text(call, "window"))
         text = self._desktop.read(window.id, self._READ_LIMIT)
-        return ToolResult(call, text or "The window shows no text."), None
+        if not text:
+            return ToolResult(call, "The window shows no text."), None
+        # Terminals keep history above; what matters is usually the last lines.
+        return ToolResult(
+            call,
+            f"Text of '{window.title}', oldest first. The newest output is at the very "
+            f"end; answer about that unless the user asks about earlier lines.\n{text}",
+        ), None
 
     def _focus(self, call: ToolCall) -> tuple[ToolResult, None]:
         window = self._find(_text(call, "window"))
