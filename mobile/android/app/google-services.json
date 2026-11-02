@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "618143439495",
+    "project_id": "sado-voice-ai",
+    "storage_bucket": "sado-voice-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618143439495:android:208a5f9ad85c762626f622",
+        "android_client_info": {
+          "package_name": "tj.sado.sado"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "618143439495-eedgmn8rpeohdog7qmta6i4tmth99lrk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "tj.sado.sado",
+            "certificate_hash": "acbcd1d34836dcbdadf9e57d9977521cc7f3b701"
+          }
+        },
+        {
+          "client_id": "618143439495-4po12a5k5gvqmvulcovsdmprf8isd1n5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA85S2UqK9PlMJ8-bA3tHAtVihwHYClQ_E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "618143439495-4po12a5k5gvqmvulcovsdmprf8isd1n5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

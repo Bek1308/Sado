@@ -9,6 +9,15 @@ abstract final class AppConfig {
   /// hosts it is closed. Empty means there is no backup.
   static const backupApiBaseUrl = String.fromEnvironment('SADO_BACKUP_API_URL');
 
+  /// The Firebase project's web client: Google signs sign-in tokens for it.
+  /// It is public by design and identifies the app, not a person.
+  static const googleWebClientId = String.fromEnvironment(
+    'SADO_GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '618143439495-4po12a5k5gvqmvulcovsdmprf8isd1n5'
+        '.apps.googleusercontent.com',
+  );
+
   /// Proves this build may drive the computer Sado runs on. Only the desktop
   /// app is built with it, so a phone can never control the computer.
   static const desktopToken = String.fromEnvironment('SADO_DESKTOP_TOKEN');
