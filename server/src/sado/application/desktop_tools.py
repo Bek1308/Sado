@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from sado.domain.conversation import ToolCall, ToolResult, ToolSpec
 from sado.domain.desktop import Desktop, WindowInfo
 from sado.domain.errors import SadoError, UnknownActionError
+from sado.domain.vision import DocumentExplainer, Paper
 
 _WINDOW = {
     "type": "string",
@@ -74,6 +75,54 @@ RUN_COMMAND = _spec(
     command={"type": "string", "description": "The PowerShell command."},
 )
 
+LOOK_AT_SCREEN = _spec(
+    "look_at_screen",
+    "Look at the computer screen right now and answer about what is on it, e.g. an error "
+    "message, a chart, a form or a web page the user is looking at.",
+    question={"type": "string", "description": "What the user wants to know about the screen."},
+)
+MEDIA_KEY = _spec(
+    "media_key",
+    "Control music, videos and the volume on the computer.",
+    key={
+        "type": "string",
+        "enum": ["play_pause", "next", "previous", "volume_up", "volume_down", "mute"],
+        "description": "Which key to press.",
+    },
+)
+LOCK_COMPUTER = _spec("lock_computer", "Lock the computer, e.g. when the user walks away.")
+COMPUTER_STATUS = _spec(
+    "computer_status", "Check the computer's battery, memory, free disk space and load."
+)
+FIND_FILES = _spec(
+    "find_files",
+    "Find the user's files by part of their name, newest first. Open one with open.",
+    file_name={
+        "type": "string",
+        "description": "Part of the file name, e.g. 'contract' or '.pdf'.",
+    },
+)
+READ_CLIPBOARD = _spec("read_clipboard", "Read the text the user last copied on the computer.")
+COPY_TEXT = _spec(
+    "copy_text",
+    "Put text on the computer's clipboard so the user can paste it anywhere.",
+    text={"type": "string", "description": "The text to copy."},
+)
+ARRANGE_WINDOW = _spec(
+    "arrange_window",
+    "Minimize, maximize or restore a window.",
+    window=_WINDOW,
+    state={"type": "string", "enum": ["minimize", "maximize", "restore"]},
+)
+PRESS_KEYS = _spec(
+    "press_keys",
+    "Press a keyboard shortcut in a window, e.g. save with {Ctrl}s, a new tab with {Ctrl}t "
+    "or reload with {F5}. Keys are written like {Ctrl}, {Alt}, {Shift}, {Win}, {Enter}, "
+    "{Tab}, {Esc} and {F5}, followed by letters. {confirm}",
+    window=_WINDOW,
+    keys={"type": "string", "description": "The shortcut, e.g. '{Ctrl}s'."},
+)
+
 DESKTOP_TOOLS = (
     LIST_WINDOWS,
     READ_WINDOW,
@@ -82,6 +131,15 @@ DESKTOP_TOOLS = (
     TYPE_INTO_WINDOW,
     CLOSE_WINDOW,
     RUN_COMMAND,
+    LOOK_AT_SCREEN,
+    MEDIA_KEY,
+    LOCK_COMPUTER,
+    COMPUTER_STATUS,
+    FIND_FILES,
+    READ_CLIPBOARD,
+    COPY_TEXT,
+    ARRANGE_WINDOW,
+    PRESS_KEYS,
 )
 
 
@@ -133,10 +191,14 @@ class PendingActions:
 
 class DesktopTools:
     _READ_LIMIT = 4000
+    _FILES_SHOWN = 15
 
-    def __init__(self, desktop: Desktop, pending: PendingActions) -> None:
+    def __init__(
+        self, desktop: Desktop, pending: PendingActions, eyes: DocumentExplainer | None = None
+    ) -> None:
         self._desktop = desktop
         self._pending = pending
+        self._eyes = eyes
 
     def run(self, call: ToolCall) -> tuple[ToolResult, PendingAction | None]:
         try:
@@ -153,6 +215,15 @@ class DesktopTools:
             TYPE_INTO_WINDOW.name: self._ask_to_type,
             CLOSE_WINDOW.name: self._ask_to_close,
             RUN_COMMAND.name: self._ask_to_run,
+            LOOK_AT_SCREEN.name: self._look,
+            MEDIA_KEY.name: self._media,
+            LOCK_COMPUTER.name: self._lock,
+            COMPUTER_STATUS.name: self._status,
+            FIND_FILES.name: self._find_files,
+            READ_CLIPBOARD.name: self._read_clipboard,
+            COPY_TEXT.name: self._copy,
+            ARRANGE_WINDOW.name: self._arrange,
+            PRESS_KEYS.name: self._ask_to_press,
         }
         handler = handlers.get(call.name)
         if handler is None:
@@ -183,6 +254,64 @@ class DesktopTools:
         target = _text(call, "target")
         self._desktop.open(target)
         return ToolResult(call, f"Opened {target}."), None
+
+    def _look(self, call: ToolCall) -> tuple[ToolResult, None]:
+        if self._eyes is None:
+            return ToolResult(call, "Sado cannot see the screen right now."), None
+        question = _text(call, "question")
+        seen = self._eyes.explain(
+            Paper(self._desktop.screenshot(), "image/png"),
+            "This is a screenshot of the user's computer screen. "
+            f"{question} Answer briefly in English, and quote exact text such as error "
+            "messages or numbers.",
+        )
+        return ToolResult(call, f"On the screen: {seen.text}"), None
+
+    def _media(self, call: ToolCall) -> tuple[ToolResult, None]:
+        key = _text(call, "key")
+        self._desktop.press_media_key(key)
+        return ToolResult(call, f"Pressed {key.replace('_', ' ')}."), None
+
+    def _lock(self, call: ToolCall) -> tuple[ToolResult, None]:
+        self._desktop.lock()
+        return ToolResult(call, "The computer is locked."), None
+
+    def _status(self, call: ToolCall) -> tuple[ToolResult, None]:
+        return ToolResult(call, self._desktop.status()), None
+
+    def _find_files(self, call: ToolCall) -> tuple[ToolResult, None]:
+        name = _text(call, "file_name")
+        paths = self._desktop.find_files(name, self._FILES_SHOWN)
+        if not paths:
+            return ToolResult(call, f"No files with '{name}' in their name."), None
+        listed = "\n".join(paths)
+        return ToolResult(call, f"Files, newest first:\n{listed}"), None
+
+    def _read_clipboard(self, call: ToolCall) -> tuple[ToolResult, None]:
+        text = self._desktop.clipboard().strip()
+        return ToolResult(
+            call, f"Clipboard: {text[: self._READ_LIMIT]}" if text else "The clipboard is empty."
+        ), None
+
+    def _copy(self, call: ToolCall) -> tuple[ToolResult, None]:
+        self._desktop.copy(_text(call, "text"))
+        return ToolResult(call, "Copied; the user can paste it now."), None
+
+    def _arrange(self, call: ToolCall) -> tuple[ToolResult, None]:
+        window = self._find(_text(call, "window"))
+        state = _text(call, "state")
+        self._desktop.set_window_state(window.id, state)
+        return ToolResult(call, f"'{window.title}' is now {state}d."), None
+
+    def _ask_to_press(self, call: ToolCall) -> tuple[ToolResult, PendingAction]:
+        window = self._find(_text(call, "window"))
+        keys = _text(call, "keys")
+
+        def press() -> str:
+            self._desktop.press_keys(window.id, keys)
+            return f"Pressed {keys} in '{window.title}'."
+
+        return self._ask(call, f"Press {keys} in '{window.title}'", press)
 
     def _ask_to_type(self, call: ToolCall) -> tuple[ToolResult, PendingAction]:
         window = self._find(_text(call, "window"))

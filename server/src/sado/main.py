@@ -259,11 +259,18 @@ def create_app(  # noqa: PLR0913
     model = reasoning_model or _default_reasoning_model(settings, model_api)
     search = web_search or _web_search(settings, model_api)
     shopping = Lists(list_store or SqliteListStore(settings.memory_db_path))
+    # Vision reuses the same thinker; a custom text-only reasoner keeps talking
+    # while document explanations report the service as unavailable.
+    if document_explainer is None:
+        if isinstance(model, (MuseSparkReasoner, UnavailableReasoner)):
+            document_explainer = model
+        else:
+            document_explainer = UnavailableReasoner()
     pending_actions = PendingActions()
     app.state.pending_actions = pending_actions
     computer = desktop or _desktop(settings)
     app.state.desktop_token = (desktop_token or _secret(settings.desktop_token)) if computer else ""
-    hands = DesktopTools(computer, pending_actions) if computer else None
+    hands = DesktopTools(computer, pending_actions, document_explainer) if computer else None
     owner = Space(Converse(model, saved, alarms, search, shopping, hands), saved, alarms, shopping)
     app.state.owner = owner
     app.state.identity = identity or _identity(settings)
@@ -277,13 +284,6 @@ def create_app(  # noqa: PLR0913
     app.state.people = PersonalSpaces(
         lambda person_id: _personal_space(settings, person_id, model, search)
     )
-    # Vision reuses the same thinker; a custom text-only reasoner keeps talking
-    # while document explanations report the service as unavailable.
-    if document_explainer is None:
-        if isinstance(model, (MuseSparkReasoner, UnavailableReasoner)):
-            document_explainer = model
-        else:
-            document_explainer = UnavailableReasoner()
     app.state.explain_document = ExplainDocument(
         document_explainer, CompositeDocumentReader(), transcribe_speech
     )

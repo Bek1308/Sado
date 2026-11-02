@@ -1819,6 +1819,8 @@ dependencies = [
 
 [package.optional-dependencies]
 desktop = [
+    { name = "pillow", marker = "sys_platform == 'win32'" },
+    { name = "psutil", marker = "sys_platform == 'win32'" },
     { name = "uiautomation", marker = "sys_platform == 'win32'" },
 ]
 speech = [
@@ -1847,6 +1849,8 @@ requires-dist = [
     { name = "olefile", specifier = "==0.47" },
     { name = "omnivoice", marker = "extra == 'speech'", specifier = ">=0.2.1" },
     { name = "openpyxl", specifier = "==3.1.5" },
+    { name = "pillow", marker = "sys_platform == 'win32' and extra == 'desktop'", specifier = ">=11" },
+    { name = "psutil", marker = "sys_platform == 'win32' and extra == 'desktop'", specifier = ">=7" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "pypdf", specifier = "==6.21.3" },
     { name = "python-multipart", specifier = ">=0.0.32" },

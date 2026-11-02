@@ -5,15 +5,20 @@ agent in a terminal just answered and type it a new task like a person would.
 """
 
 import ctypes
+import io
 import os
+import shutil
 import subprocess
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from ctypes import wintypes
+from pathlib import Path
 from typing import Any
 
+import psutil
 import uiautomation as auto
+from PIL import ImageGrab
 
 from sado.domain.desktop import WindowInfo
 from sado.domain.errors import DesktopUnavailableError
@@ -25,6 +30,25 @@ _SEARCH_DEPTH = 14
 _TERMINAL_CLASS = "TermControl"
 # Gives the target window time to take focus before keys arrive.
 _FOCUS_SETTLE_SECONDS = 0.25
+_MEDIA_KEYS = {
+    "play_pause": 0xB3,
+    "next": 0xB0,
+    "previous": 0xB1,
+    "volume_up": 0xAF,
+    "volume_down": 0xAE,
+    "mute": 0xAD,
+}
+_KEY_UP = 0x0002
+# One press of the volume keys moves Windows' volume by two points.
+_VOLUME_STEPS = 5
+_WINDOW_STATES = {"restore": 0, "maximize": 1, "minimize": 2}
+# Where people keep their own files; walking the whole disk would take minutes.
+_USER_FOLDERS = ("Desktop", "Documents", "Downloads", "Pictures", "Videos", "Music")
+_FIND_SECONDS = 4.0
+_SKIPPED_FOLDERS = {"node_modules", ".git", ".venv", "__pycache__", "AppData", "build"}
+_GIGABYTE = 1024**3
+# Muse reads text fine at half of a large screen and answers sooner.
+_SHRINK_WIDER_THAN = 1600
 
 
 class WindowsDesktop:
@@ -92,6 +116,82 @@ class WindowsDesktop:
         if result.returncode:
             output = f"Exit code {result.returncode}.\n{output}"
         return output[-_COMMAND_OUTPUT_LIMIT:]
+
+    def screenshot(self) -> bytes:
+        image = ImageGrab.grab(all_screens=False)
+        if image.width > _SHRINK_WIDER_THAN:
+            image = image.resize((image.width // 2, image.height // 2))
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    def press_media_key(self, key: str) -> None:
+        code = _MEDIA_KEYS.get(key)
+        if code is None:
+            raise DesktopUnavailableError(f"there is no media key called {key}")
+        presses = _VOLUME_STEPS if key.startswith("volume") else 1
+        for _ in range(presses):
+            ctypes.windll.user32.keybd_event(code, 0, 0, 0)
+            ctypes.windll.user32.keybd_event(code, 0, _KEY_UP, 0)
+
+    def press_keys(self, window_id: int, keys: str) -> None:
+        with _automation():
+            _window(window_id).SetActive()
+            time.sleep(_FOCUS_SETTLE_SECONDS)
+            auto.SendKeys(keys, waitTime=0.1)
+
+    def set_window_state(self, window_id: int, state: str) -> None:
+        if state not in _WINDOW_STATES:
+            raise DesktopUnavailableError(f"a window cannot be made {state}")
+        with _automation():
+            _window(window_id).GetWindowPattern().SetWindowVisualState(_WINDOW_STATES[state])
+
+    def lock(self) -> None:
+        if not ctypes.windll.user32.LockWorkStation():
+            raise DesktopUnavailableError("Windows did not lock")
+
+    def status(self) -> str:
+        memory = psutil.virtual_memory()
+        disk = shutil.disk_usage(Path.home().anchor)
+        lines = [
+            f"Processor load: {psutil.cpu_percent(interval=0.3):.0f}%",
+            f"Memory: {memory.used / _GIGABYTE:.1f} of {memory.total / _GIGABYTE:.1f} GB used",
+            f"Disk {Path.home().anchor}: {disk.free / _GIGABYTE:.0f} GB free "
+            f"of {disk.total / _GIGABYTE:.0f} GB",
+        ]
+        battery = psutil.sensors_battery()
+        if battery is not None:
+            charging = "charging" if battery.power_plugged else "on battery"
+            lines.insert(0, f"Battery: {battery.percent:.0f}%, {charging}")
+        return "\n".join(lines)
+
+    def find_files(self, name: str, limit: int) -> list[str]:
+        wanted = name.casefold()
+        deadline = time.monotonic() + _FIND_SECONDS
+        found: list[Path] = []
+        for folder in (Path.home() / sub for sub in _USER_FOLDERS):
+            for root, dirs, files in os.walk(folder):
+                dirs[:] = [d for d in dirs if d not in _SKIPPED_FOLDERS and not d.startswith(".")]
+                found.extend(Path(root) / file for file in files if wanted in file.casefold())
+                if time.monotonic() > deadline:
+                    break
+        found.sort(key=_modified, reverse=True)
+        return [str(path) for path in found[:limit]]
+
+    def clipboard(self) -> str:
+        with _automation():
+            return str(auto.GetClipboardText() or "")
+
+    def copy(self, text: str) -> None:
+        with _automation():
+            auto.SetClipboardText(text)
+
+
+def _modified(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 @contextmanager

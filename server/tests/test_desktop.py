@@ -7,9 +7,18 @@ from fastapi.testclient import TestClient
 
 from sado.application.converse import Converse
 from sado.application.desktop_tools import (
+    ARRANGE_WINDOW,
     CLOSE_WINDOW,
+    COMPUTER_STATUS,
+    COPY_TEXT,
+    FIND_FILES,
     LIST_WINDOWS,
+    LOCK_COMPUTER,
+    LOOK_AT_SCREEN,
+    MEDIA_KEY,
     OPEN,
+    PRESS_KEYS,
+    READ_CLIPBOARD,
     READ_WINDOW,
     RUN_COMMAND,
     TYPE_INTO_WINDOW,
@@ -30,6 +39,7 @@ from sado.domain.conversation import (
 from sado.domain.desktop import WindowInfo
 from sado.domain.errors import UnknownActionError
 from sado.domain.language import Language
+from sado.domain.vision import Explanation, Paper
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 from sado.main import create_app
 from tests.fakes import fake_language_pack, fake_voice_catalog
@@ -46,6 +56,11 @@ class _FakeDesktop:
     closed: list[int] = field(default_factory=list)
     opened: list[str] = field(default_factory=list)
     commands: list[str] = field(default_factory=list)
+    media: list[str] = field(default_factory=list)
+    pressed: list[tuple[int, str]] = field(default_factory=list)
+    states: list[tuple[int, str]] = field(default_factory=list)
+    locked: bool = False
+    copied: str = ""
 
     def windows(self) -> list[WindowInfo]:
         return [_TERMINAL, _BROWSER]
@@ -68,6 +83,33 @@ class _FakeDesktop:
     def run_command(self, command: str) -> str:
         self.commands.append(command)
         return "ok"
+
+    def screenshot(self) -> bytes:
+        return b"PNG"
+
+    def press_media_key(self, key: str) -> None:
+        self.media.append(key)
+
+    def press_keys(self, window_id: int, keys: str) -> None:
+        self.pressed.append((window_id, keys))
+
+    def set_window_state(self, window_id: int, state: str) -> None:
+        self.states.append((window_id, state))
+
+    def lock(self) -> None:
+        self.locked = True
+
+    def status(self) -> str:
+        return "Battery: 80%, charging"
+
+    def find_files(self, name: str, limit: int) -> list[str]:
+        return ["C:/Users/me/Documents/contract.pdf"] if name == "contract" else []
+
+    def clipboard(self) -> str:
+        return self.copied
+
+    def copy(self, text: str) -> None:
+        self.copied = text
 
 
 def _call(spec: ToolSpec, **arguments: object) -> ToolCall:
@@ -309,3 +351,53 @@ def test_guests_never_see_the_owners_memories() -> None:
         "The owner's PIN hint is the cat's name."
     ]
     assert [m["text"] for m in guest.get("/memories").json()] == ["The judge likes green tea."]
+
+
+class _Eyes:
+    def __init__(self) -> None:
+        self.asked: list[str] = []
+
+    def explain(self, paper: Paper, instructions: str) -> Explanation:
+        self.asked.append(instructions)
+        return Explanation(f"An error dialog says 'File not found' ({paper.media_type}).")
+
+
+def test_sado_looks_at_the_screen_and_answers() -> None:
+    eyes = _Eyes()
+    tools = DesktopTools(_FakeDesktop(), PendingActions(), eyes)
+
+    seen, waiting = tools.run(_call(LOOK_AT_SCREEN, question="What does this error mean?"))
+
+    assert waiting is None
+    assert "File not found" in seen.output
+    assert "What does this error mean?" in eyes.asked[0]
+
+
+def test_everyday_computer_actions_need_no_yes() -> None:
+    tools, desktop, _ = _tools()
+
+    tools.run(_call(MEDIA_KEY, key="play_pause"))
+    tools.run(_call(ARRANGE_WINDOW, window="chrome", state="minimize"))
+    tools.run(_call(COPY_TEXT, text="Salom"))
+    clipboard, _ = tools.run(_call(READ_CLIPBOARD))
+    status, _ = tools.run(_call(COMPUTER_STATUS))
+    files, _ = tools.run(_call(FIND_FILES, file_name="contract"))
+    tools.run(_call(LOCK_COMPUTER))
+
+    assert desktop.media == ["play_pause"]
+    assert desktop.states == [(22, "minimize")]
+    assert clipboard.output == "Clipboard: Salom"
+    assert "Battery: 80%" in status.output
+    assert "contract.pdf" in files.output
+    assert desktop.locked
+
+
+def test_shortcuts_wait_for_a_yes() -> None:
+    tools, desktop, pending = _tools()
+
+    _, waiting = tools.run(_call(PRESS_KEYS, window="chrome", keys="{Ctrl}w"))
+
+    assert waiting is not None
+    assert desktop.pressed == []
+    pending.take(waiting.id).run()
+    assert desktop.pressed == [(22, "{Ctrl}w")]
