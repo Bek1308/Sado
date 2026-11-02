@@ -62,10 +62,18 @@ class VoiceConfig:
     asr_timeout_seconds: float
 
 
+@dataclass(frozen=True, slots=True)
+class BackupListener:
+    """Where Muse listens when the Omnilingual worker cannot."""
+
+    http: httpx.Client
+    model: str
+    reasoning_effort: str | None = None
+
+
 def build_language_packs(
-    config: VoiceConfig, model_api: httpx.Client | None = None, model: str = ""
+    config: VoiceConfig, backup: BackupListener | None = None
 ) -> dict[Language, LanguagePack]:
-    """`model_api` lets Muse listen when the Omnilingual worker cannot."""
     omnivoice = (
         OmniVoiceEngine(config.omnivoice_device, config.clone_quality)
         if config.use_omnivoice
@@ -77,19 +85,20 @@ def build_language_packs(
             language=language,
             normalizer=_NORMALIZERS[language],
             synthesizer=_build_synthesizer(language, config, omnivoice),
-            recognizer=_build_recognizer(language, asr_http, model_api, model),
+            recognizer=_build_recognizer(language, asr_http, backup),
         )
         for language in Language
     }
 
 
 def _build_recognizer(
-    language: Language, asr_http: httpx.Client, model_api: httpx.Client | None, model: str
+    language: Language, asr_http: httpx.Client, backup: BackupListener | None
 ) -> SpeechRecognizer:
     omnilingual = OmnilingualRecognizer(asr_http, _OMNILINGUAL_CODES[language])
-    if model_api is None:
+    if backup is None:
         return omnilingual
-    return FallbackRecognizer(omnilingual, MuseListener(model_api, model, language))
+    muse = MuseListener(backup.http, backup.model, language, backup.reasoning_effort)
+    return FallbackRecognizer(omnilingual, muse)
 
 
 def _build_synthesizer(

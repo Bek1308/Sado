@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     search_city: str = "Dushanbe"
     search_timezone: str = "Asia/Dushanbe"
 
+    # Muse Spark Open on Baseten hears speech when the Omnilingual worker is away, e.g.
+    # on a host without a GPU. Without a key, Muse on the Model API listens instead.
+    baseten_api_key: SecretStr | None = None
+    baseten_url: str = "https://inference.baseten.co/v1"
+    baseten_model: str = "meta-models/muse-spark-open-1026"
+    listen_timeout_seconds: float = 30.0
+
     asr_url: str = "http://localhost:8011"
     # Language detection may transcribe the same clip up to four times.
     asr_timeout_seconds: float = 20.0

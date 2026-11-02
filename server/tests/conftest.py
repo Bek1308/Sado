@@ -5,3 +5,4 @@ import os
 os.environ["SADO_MEMORY_DB_PATH"] = ":memory:"
 os.environ["SADO_WARM_UP_VOICES"] = "false"
 os.environ["SADO_META_API_KEY"] = ""
+os.environ["SADO_BASETEN_API_KEY"] = ""

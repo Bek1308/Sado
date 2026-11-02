@@ -32,7 +32,11 @@ from sado.domain.search import WebSearch
 from sado.domain.speech import LanguagePack
 from sado.domain.vision import DocumentExplainer
 from sado.infrastructure.documents.readers import CompositeDocumentReader
-from sado.infrastructure.languages.packs import VoiceConfig, build_language_packs
+from sado.infrastructure.languages.packs import (
+    BackupListener,
+    VoiceConfig,
+    build_language_packs,
+)
 from sado.infrastructure.memory.sqlite_lists import SqliteListStore
 from sado.infrastructure.memory.sqlite_reminders import SqliteReminderStore
 from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
@@ -113,6 +117,20 @@ def _model_api(settings: Settings) -> httpx.Client | None:
     )
 
 
+def _backup_listener(settings: Settings, model_api: httpx.Client | None) -> BackupListener | None:
+    # Muse Spark Open on Baseten hears reliably; Muse on the Model API often misses audio.
+    if baseten_key := _secret(settings.baseten_api_key):
+        http = httpx.Client(
+            base_url=settings.baseten_url,
+            headers={"Authorization": f"Bearer {baseten_key}"},
+            timeout=settings.listen_timeout_seconds,
+        )
+        return BackupListener(http, settings.baseten_model)
+    if model_api is None:
+        return None
+    return BackupListener(model_api, settings.reasoning_model, reasoning_effort="low")
+
+
 def _web_search(settings: Settings, model_api: httpx.Client | None) -> WebSearch | None:
     if model_api is None:
         return None
@@ -181,7 +199,7 @@ def create_app(  # noqa: PLR0913
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
     model_api = _model_api(settings)
     packs = language_packs or build_language_packs(
-        _voice_config(settings), model_api, settings.reasoning_model
+        _voice_config(settings), _backup_listener(settings, model_api)
     )
     speak_text = SpeakText(packs, catalog)
 

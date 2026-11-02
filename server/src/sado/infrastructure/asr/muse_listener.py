@@ -1,8 +1,9 @@
 """Speech recognition by Muse Spark itself, for when the Omnilingual worker is away.
 
-Muse hears audio through the Model API's chat completions. It recognises Uzbek and Tajik
-about as well as Omnilingual, but more slowly, and now and then it answers that it got no
-audio at all; such answers are retried rather than taken for what the user said.
+Muse hears audio through chat completions, either Muse Spark Open on Baseten or Muse
+Spark on the Model API. It recognises Uzbek, Tajik, Russian and English about as well as
+Omnilingual, but more slowly. Now and then, mostly on the Model API, it answers that it
+got no audio at all; such answers are retried rather than taken for what the user said.
 """
 
 import base64
@@ -55,6 +56,8 @@ class MuseListener:
     http: httpx.Client
     model: str
     language: Language
+    reasoning_effort: str | None = None
+    """Muse on the Model API needs "low": with more reasoning it decides it got no audio."""
     attempts: int = 3
 
     def transcribe(self, recording: Recording) -> Transcript:
@@ -71,11 +74,9 @@ class MuseListener:
             f"Transcribe the {_SPEECH[self.language]} in this audio word for word. "
             "Reply with the transcript only."
         )
-        body = {
+        body: dict[str, object] = {
             "model": self.model,
             "temperature": 0,
-            # With more reasoning Muse tends to decide it was given no audio.
-            "reasoning_effort": "low",
             "messages": [
                 {
                     "role": "user",
@@ -86,6 +87,8 @@ class MuseListener:
                 }
             ],
         }
+        if self.reasoning_effort is not None:
+            body["reasoning_effort"] = self.reasoning_effort
         try:
             response = self.http.post("/chat/completions", json=body)
             response.raise_for_status()
