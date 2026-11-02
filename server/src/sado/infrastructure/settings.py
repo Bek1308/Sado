@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Only requests carrying this token may use the computer, so a tunnel that exposes
     # the server to a phone never exposes the computer with it.
     desktop_token: SecretStr | None = None
+    # Listen on the computer's microphone for "Sado", which opens the voice bar. The small
+    # Vosk model runs on the computer; nothing it hears leaves it.
+    wake_word: bool = False
+    wake_model_dir: str = "data/wake/vosk-model-small-ru-0.22"
     mood_reference_dir: str = "data/voices"
     clone_num_steps: int = 64
     clone_guidance_scale: float = 3.0

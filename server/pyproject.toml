@@ -29,7 +29,9 @@ speech = [
 desktop = [
     "pillow>=11 ; sys_platform == 'win32'",
     "psutil>=7 ; sys_platform == 'win32'",
+    "sounddevice>=0.5 ; sys_platform == 'win32'",
     "uiautomation>=2.0.20 ; sys_platform == 'win32'",
+    "vosk>=0.3.45 ; sys_platform == 'win32'",
 ]
 
 [dependency-groups]
@@ -78,7 +80,7 @@ mypy_path = "src"
 packages = ["sado"]
 
 [[tool.mypy.overrides]]
-module = ["num2words", "olefile", "omnivoice", "openpyxl", "psutil", "torch", "transformers", "uiautomation", "xlrd"]
+module = ["num2words", "olefile", "omnivoice", "openpyxl", "psutil", "sounddevice", "torch", "transformers", "uiautomation", "vosk", "xlrd"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

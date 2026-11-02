@@ -23,6 +23,7 @@ from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
+from sado.application.wake import WakeSignal
 from sado.domain.conversation import ReasoningModel
 from sado.domain.desktop import Desktop
 from sado.domain.errors import InvalidIdentityError, SadoError
@@ -66,6 +67,7 @@ from sado.presentation.routers import (
     transcriptions,
     voices,
 )
+from sado.presentation.routers import desktop as desktop_router
 
 
 def _voice_catalog(default_voice_id: str) -> VoiceCatalog:
@@ -137,6 +139,28 @@ def _backup_listener(settings: Settings, model_api: httpx.Client | None) -> Back
     return BackupListener(model_api, settings.reasoning_model, reasoning_effort="low")
 
 
+def _welcome_people(
+    app: FastAPI,
+    settings: Settings,
+    identity: IdentityVerifier | None,
+    model: ReasoningModel,
+    search: WebSearch | None,
+) -> None:
+    """Tells the owner from everyone else, and gives each person a Sado of their own."""
+    app.state.identity = identity or _identity(settings)
+    app.state.owner_emails = frozenset(
+        email.strip().lower() for email in settings.owner_emails.split(",") if email.strip()
+    )
+    app.state.phone_inbox = PhoneInbox()
+    # With nothing to tell people apart, one person uses Sado and it is the owner.
+    strangers_possible = bool(app.state.desktop_token or app.state.identity)
+    owner = cast(Space, app.state.owner)
+    app.state.guest = _guest_space(settings, model, search) if strangers_possible else owner
+    app.state.people = PersonalSpaces(
+        lambda person_id: _personal_space(settings, person_id, model, search)
+    )
+
+
 def _guest_space(settings: Settings, model: ReasoningModel, search: WebSearch | None) -> Space:
     """Sado for devices that did not sign in: same mind, a shared guest memory."""
     return _space_at(settings.guest_db_path, model, search)
@@ -166,6 +190,13 @@ def _identity(settings: Settings) -> IdentityVerifier | None:
     if not settings.firebase_project_id.strip():
         return None
     return FirebaseIdentity(settings.firebase_project_id.strip())
+
+
+def _listen_for_wake_word(settings: Settings, signal: WakeSignal) -> None:
+    # Imported only when asked for: it needs a microphone and the optional `desktop` extra.
+    from sado.infrastructure.desktop.wake_word import WakeWordListener  # noqa: PLC0415
+
+    WakeWordListener(Path(settings.wake_model_dir), signal.ring).start()
 
 
 def _web_search(settings: Settings, model_api: httpx.Client | None) -> WebSearch | None:
@@ -247,6 +278,8 @@ def create_app(  # noqa: PLR0913
             threading.Thread(
                 target=_warm_up_voices, args=(speak_text, list(packs)), daemon=True
             ).start()
+        if settings.wake_word and app.state.desktop_token:
+            _listen_for_wake_word(settings, app.state.wake)
         yield
 
     app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
@@ -268,22 +301,13 @@ def create_app(  # noqa: PLR0913
             document_explainer = UnavailableReasoner()
     pending_actions = PendingActions()
     app.state.pending_actions = pending_actions
+    app.state.wake = WakeSignal()
     computer = desktop or _desktop(settings)
     app.state.desktop_token = (desktop_token or _secret(settings.desktop_token)) if computer else ""
     hands = DesktopTools(computer, pending_actions, document_explainer) if computer else None
     owner = Space(Converse(model, saved, alarms, search, shopping, hands), saved, alarms, shopping)
     app.state.owner = owner
-    app.state.identity = identity or _identity(settings)
-    app.state.owner_emails = frozenset(
-        email.strip().lower() for email in settings.owner_emails.split(",") if email.strip()
-    )
-    app.state.phone_inbox = PhoneInbox()
-    # With nothing to tell people apart, one person uses Sado and it is the owner.
-    strangers_possible = bool(app.state.desktop_token or app.state.identity)
-    app.state.guest = _guest_space(settings, model, search) if strangers_possible else owner
-    app.state.people = PersonalSpaces(
-        lambda person_id: _personal_space(settings, person_id, model, search)
-    )
+    _welcome_people(app, settings, identity, model, search)
     app.state.explain_document = ExplainDocument(
         document_explainer, CompositeDocumentReader(), transcribe_speech
     )
@@ -300,6 +324,7 @@ def create_app(  # noqa: PLR0913
     app.include_router(lists.router)
     app.include_router(actions.router)
     app.include_router(phone.router)
+    app.include_router(desktop_router.router)
     return app
 
 

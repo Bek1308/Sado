@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:sado/core/desktop/desktop_host.dart';
+import 'package:sado/core/network/http_client.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/conversation/presentation/providers/live_providers.dart';
 import 'package:sado/features/desktop/presentation/providers/desktop_view_providers.dart';
@@ -15,8 +17,8 @@ import 'package:window_manager/window_manager.dart';
 
 /// Keeps Sado out of sight on a computer. It lives in the tray; the hotkey
 /// brings up only a slim voice bar and starts talking right away, and the
-/// bar goes again once the conversation is over. The full window opens
-/// from the tray.
+/// bar goes again once the conversation is over. Saying "Sado" does the same
+/// as the hotkey. The full window opens from the tray.
 class DesktopShell extends ConsumerStatefulWidget {
   const DesktopShell({required this.child, super.key});
 
@@ -39,6 +41,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     modifiers: [HotKeyModifier.control, HotKeyModifier.alt],
   );
   Timer? _hideTimer;
+  bool _listeningForName = true;
 
   @override
   void initState() {
@@ -46,6 +49,31 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
     trayManager.addListener(this);
     windowManager.addListener(this);
     unawaited(_setUp());
+    unawaited(_answerWhenCalled());
+  }
+
+  /// Says "Sado" and Sado comes: the server hears the name on the microphone,
+  /// and this waits for it.
+  Future<void> _answerWhenCalled() async {
+    final http = ref.read(httpClientProvider);
+    var seen = -1;
+    while (_listeningForName && mounted) {
+      try {
+        final response = await http.get<Map<String, dynamic>>(
+          '/desktop/wake',
+          queryParameters: {'after': seen},
+        );
+        final count = response.data?['count'] as int? ?? seen;
+        // The first answer only says where the count stands.
+        final called = seen >= 0 && count > seen;
+        seen = count;
+        // Sado saying its own name mid-answer must not restart the talk.
+        if (called && !ref.read(_activityProvider).busy) await _talk();
+      } on DioException {
+        // The server is away; ask again in a moment.
+        await Future<void>.delayed(const Duration(seconds: 5));
+      }
+    }
   }
 
   Future<void> _setUp() async {
@@ -66,6 +94,7 @@ class _DesktopShellState extends ConsumerState<DesktopShell>
 
   @override
   void dispose() {
+    _listeningForName = false;
     _hideTimer?.cancel();
     trayManager.removeListener(this);
     windowManager.removeListener(this);

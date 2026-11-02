@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="talk_short">Talk to Sado</string>
+    <string name="talk_long">Talk to Sado now</string>
+    <string name="tile_label">Sado</string>
+</resources>
