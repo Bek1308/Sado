@@ -12,6 +12,7 @@ import 'package:sado/features/conversation/domain/repositories/conversation_repo
 import 'package:sado/features/conversation/domain/usecases/ask_sado.dart';
 import 'package:sado/features/lists/presentation/providers/list_providers.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
+import 'package:sado/features/phone/domain/entities/phone_action.dart';
 import 'package:sado/features/phone/domain/entities/phone_outcome_message.dart';
 import 'package:sado/features/phone/presentation/providers/phone_providers.dart';
 import 'package:sado/features/speech/domain/entities/spoken_language.dart';
@@ -21,6 +22,7 @@ final conversationRepositoryProvider = Provider<ConversationRepository>(
     ConversationRemoteDataSource(
       ref.watch(httpClientProvider),
       canActOnPhone: ref.watch(phoneControlProvider).supported,
+      deviceStatus: ref.watch(phoneControlProvider).status,
     ),
   ),
 );
@@ -74,6 +76,24 @@ class ConversationController extends Notifier<ConversationState> {
     SpokenLanguage.english: 'Okay, I cancelled it.',
   };
 
+  /// Calls and texts wait on the phone itself for the user's yes; this is
+  /// the question's id, to tell it from the computer's.
+  static const _phoneQuestionId = 'phone';
+  static const Map<SpokenLanguage, String> _calling = {
+    SpokenLanguage.uzbek: "Qo'ng'iroq qilyapman.",
+    SpokenLanguage.tajik: 'Занг мезанам.',
+    SpokenLanguage.russian: 'Звоню.',
+    SpokenLanguage.english: 'Calling now.',
+  };
+  static const Map<SpokenLanguage, String> _sent = {
+    SpokenLanguage.uzbek: 'Xabar yuborildi.',
+    SpokenLanguage.tajik: 'Паём фиристода шуд.',
+    SpokenLanguage.russian: 'Сообщение отправлено.',
+    SpokenLanguage.english: 'Message sent.',
+  };
+
+  PhoneAction? _phoneAwaitingYes;
+
   @override
   ConversationState build() => const ConversationState();
 
@@ -92,6 +112,8 @@ class ConversationController extends Notifier<ConversationState> {
     final pending = pendingAction;
     if (pending != null) {
       switch (consentIn(text)) {
+        case Consent.yes when pending.id == _phoneQuestionId:
+          return _doOnPhone(text, language);
         case Consent.yes:
           return _send(
             text,
@@ -163,11 +185,66 @@ class ConversationController extends Notifier<ConversationState> {
     SpokenLanguage language,
   ) async {
     final phone = ref.read(phoneControlProvider);
+    var answer = reply;
     for (final action in reply.phoneActions) {
+      if (action.needsYes) {
+        _phoneAwaitingYes = action;
+        answer = answer.asking(
+          PendingAction(id: _phoneQuestionId, description: action.description),
+        );
+        continue;
+      }
       final outcome = await phone.perform(action);
       final problem = phoneOutcomeMessage(outcome, action, language);
       if (problem != null) return reply.saying(problem);
     }
+    return answer;
+  }
+
+  /// A call or a text the owner asked for at the computer: the phone asks
+  /// here too, since it is the one that reaches the other person.
+  void askOnPhone(PhoneAction action) {
+    _phoneAwaitingYes = action;
+    final question = SadoReply(
+      text: '${action.description}?',
+      pendingAction: PendingAction(
+        id: _phoneQuestionId,
+        description: action.description,
+      ),
+    );
+    state = ConversationState(
+      messages: [
+        ...state.messages,
+        ChatMessage(speaker: ChatSpeaker.sado, text: question.text),
+      ],
+      lastReply: question,
+    );
+  }
+
+  /// The user said yes to a call or a text: the phone places or sends it.
+  Future<SadoReply> _doOnPhone(String text, SpokenLanguage language) async {
+    final action = _phoneAwaitingYes;
+    _phoneAwaitingYes = null;
+    final messages = [
+      ...state.messages,
+      ChatMessage(speaker: ChatSpeaker.user, text: text),
+    ];
+    state = ConversationState(messages: messages, isThinking: true);
+    var said = _cancelled[language]!;
+    if (action != null) {
+      final outcome = await ref.read(phoneControlProvider).perform(action);
+      said =
+          phoneOutcomeMessage(outcome, action, language) ??
+          (action.kind == 'call' ? _calling : _sent)[language]!;
+    }
+    final reply = SadoReply(text: said);
+    state = ConversationState(
+      messages: [
+        ...messages,
+        ChatMessage(speaker: ChatSpeaker.sado, text: said),
+      ],
+      lastReply: reply,
+    );
     return reply;
   }
 
@@ -185,8 +262,11 @@ class ConversationController extends Notifier<ConversationState> {
       ],
       lastReply: reply,
     );
+    _phoneAwaitingYes = null;
     // Nothing runs without a yes anyway; telling the server only tidies up.
-    await ref.read(conversationRepositoryProvider).cancelAction(pending.id);
+    if (pending.id != _phoneQuestionId) {
+      await ref.read(conversationRepositoryProvider).cancelAction(pending.id);
+    }
     return reply;
   }
 

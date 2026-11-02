@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/network/http_client.dart';
 import 'package:sado/features/account/presentation/providers/account_providers.dart';
+import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
 import 'package:sado/features/phone/domain/entities/phone_action.dart';
 import 'package:sado/features/phone/presentation/providers/phone_providers.dart';
 
@@ -55,15 +56,18 @@ class _PhoneInboxListenerState extends ConsumerState<PhoneInboxListener>
           .get<List<dynamic>>('/phone/actions');
       final phone = ref.read(phoneControlProvider);
       for (final item in response.data ?? const []) {
-        final action = item as Map<String, dynamic>;
-        await phone.perform(
-          PhoneAction(
-            kind: action['kind'] as String,
-            details: (action['details'] as Map<String, dynamic>).map(
-              (key, value) => MapEntry(key, value as String),
-            ),
+        final fields = item as Map<String, dynamic>;
+        final action = PhoneAction(
+          kind: fields['kind'] as String,
+          details: (fields['details'] as Map<String, dynamic>).map(
+            (key, value) => MapEntry(key, value as String),
           ),
         );
+        if (action.needsYes) {
+          ref.read(conversationControllerProvider.notifier).askOnPhone(action);
+        } else {
+          await phone.perform(action);
+        }
       }
     } on DioException catch (error) {
       _notTheOwner = error.response?.statusCode == 403;

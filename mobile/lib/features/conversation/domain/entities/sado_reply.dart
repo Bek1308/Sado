@@ -37,4 +37,14 @@ final class SadoReply {
     listsChanged: listsChanged,
     pendingAction: pendingAction,
   );
+
+  /// The same reply, now waiting for the user's yes on [question].
+  SadoReply asking(PendingAction question) => SadoReply(
+    text: text,
+    remembered: remembered,
+    reminded: reminded,
+    listsChanged: listsChanged,
+    pendingAction: question,
+    phoneActions: phoneActions,
+  );
 }

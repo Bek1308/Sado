@@ -53,6 +53,9 @@ final class _Phone implements PhoneControl {
     performed.add(action);
     return outcome;
   }
+
+  @override
+  Future<String> status() async => 'Battery 80%, charging.';
 }
 
 Future<(SadoReply?, _Phone, ProviderContainer)> _askToCall(
@@ -72,18 +75,37 @@ Future<(SadoReply?, _Phone, ProviderContainer)> _askToCall(
   return (reply, phone, container);
 }
 
+Future<SadoReply?> _say(ProviderContainer container, String text) => container
+    .read(conversationControllerProvider.notifier)
+    .ask(text, SpokenLanguage.uzbek, SadoMode.personal);
+
 void main() {
-  test('the phone does what Sado said', () async {
-    final (reply, phone, _) = await _askToCall(PhoneOutcome.done);
+  test('a call waits for the yes, then the phone places it', () async {
+    final (reply, phone, container) = await _askToCall(PhoneOutcome.done);
+
+    expect(phone.performed, isEmpty);
+    expect(reply?.pendingAction?.description, 'Call Onam');
+
+    final done = await _say(container, 'Ha');
 
     expect(phone.performed.single.details['contact'], 'Onam');
-    expect(reply?.text, "Onangizga qo'ng'iroq qilyapman.");
+    expect(done?.text, "Qo'ng'iroq qilyapman.");
+  });
+
+  test('a no means no call', () async {
+    final (_, phone, container) = await _askToCall(PhoneOutcome.done);
+
+    final cancelled = await _say(container, "Yo'q");
+
+    expect(phone.performed, isEmpty);
+    expect(cancelled?.text, 'Mayli, bekor qildim.');
   });
 
   test('Sado admits it when the phone could not do it', () async {
-    final (reply, _, container) = await _askToCall(
+    final (_, _, container) = await _askToCall(
       PhoneOutcome.contactNotFound,
     );
+    final reply = await _say(container, 'Ha');
 
     expect(reply?.text, 'Kontaktlaringizda «Onam» topilmadi.');
     expect(

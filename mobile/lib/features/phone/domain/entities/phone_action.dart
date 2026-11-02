@@ -11,6 +11,17 @@ final class PhoneAction {
   /// The person, app or place the action is about, to name it to the user.
   String get subject =>
       details['contact'] ?? details['target'] ?? details['destination'] ?? '';
+
+  /// Calls and text messages reach other people, so the user says yes first.
+  bool get needsYes =>
+      kind == 'call' || (kind == 'message' && details['app'] == 'sms');
+
+  /// What the confirmation card shows.
+  String get description => switch (kind) {
+    'call' => 'Call $subject',
+    'message' => 'Text $subject: "${details['text'] ?? ''}"',
+    _ => kind,
+  };
 }
 
 /// How carrying out a [PhoneAction] went.

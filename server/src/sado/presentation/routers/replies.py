@@ -46,6 +46,8 @@ class ReplyRequest(BaseModel):
     messages: list[MessageModel] = Field(min_length=1, max_length=_MAX_MESSAGES)
     phone: bool = False
     """Set by a phone app that can carry out phone actions such as calls and alarms."""
+    device: str = Field(default="", max_length=300)
+    """What the phone reports about itself, e.g. "Battery 54%, charging"."""
 
 
 class PendingActionModel(BaseModel):
@@ -100,6 +102,7 @@ def answer(
         allow_desktop=allow_desktop,
         phone=request.phone,
         phone_far=far_phone is not None,
+        device=request.device if request.phone else "",
     )
     if far_phone is not None:
         far_phone.post(reply.phone_actions)

@@ -24,6 +24,15 @@ final class AndroidPhoneControl implements PhoneControl {
       return PhoneOutcome.failed;
     }
   }
+
+  @override
+  Future<String> status() async {
+    try {
+      return await _channel.invokeMethod<String>('status') ?? '';
+    } on PlatformException {
+      return '';
+    }
+  }
 }
 
 /// A computer, or anything else that is not a phone Sado can act on.
@@ -35,4 +44,7 @@ final class NoPhoneControl implements PhoneControl {
 
   @override
   Future<PhoneOutcome> perform(PhoneAction action) async => PhoneOutcome.failed;
+
+  @override
+  Future<String> status() async => '';
 }

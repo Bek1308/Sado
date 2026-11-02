@@ -10,6 +10,7 @@ class ConversationRemoteDataSource {
   const ConversationRemoteDataSource(
     this._httpClient, {
     this.canActOnPhone = false,
+    this.deviceStatus,
   });
 
   static const _repliesPath = '/replies';
@@ -20,6 +21,9 @@ class ConversationRemoteDataSource {
   /// Whether this app can call, message or set alarms on the phone it runs
   /// on, so Sado may offer to.
   final bool canActOnPhone;
+
+  /// What the phone says about itself with every question, e.g. its battery.
+  final Future<String> Function()? deviceStatus;
 
   Future<SadoReply> reply(
     List<ChatMessage> conversation,
@@ -51,6 +55,7 @@ class ConversationRemoteDataSource {
         // Lets Sado read "tomorrow at 9" on the user's own clock.
         'utc_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
         'phone': canActOnPhone,
+        'device': await deviceStatus?.call() ?? '',
         'messages': [
           for (final message in conversation)
             {'speaker': message.speaker.code, 'text': message.text},

@@ -111,7 +111,8 @@ _ON_THE_PHONE = (
     "The user is talking to you on their phone, and your phone_ tools act on it: call "
     "or message people, set alarms and timers, open apps, show the way, switch the "
     "flashlight. When they ask for one of these, use the tool instead of explaining how "
-    "to do it themselves."
+    "to do it themselves. Turning Wi-Fi or Bluetooth on or off is not allowed to apps: "
+    "open its settings page for the user instead."
 )
 
 _PHONE_FAR = (
@@ -197,6 +198,7 @@ class Converse:
         allow_desktop: bool = False,
         phone: bool = False,
         phone_far: bool = False,
+        device: str = "",
     ) -> Reply:
         """Answers the last user message.
 
@@ -204,7 +206,8 @@ class Converse:
         can tell them how it went. `allow_desktop` is set only for requests from a device
         trusted to control the computer. `phone` is set when the user talks from a phone
         that can carry out phone actions; `phone_far` when the owner talks at the computer
-        and their phone will carry them out.
+        and their phone will carry them out. `device` is what the phone reports about
+        itself, e.g. its battery.
         """
         if not conversation:
             raise NothingToAnswerError
@@ -230,6 +233,8 @@ class Converse:
             )
         elif phone:
             instructions = f"{instructions}\n\n{_ON_THE_PHONE}"
+            if device.strip():
+                instructions = f"{instructions}\nThe phone right now: {device.strip()}"
         elif phone_far:
             instructions = f"{instructions}\n\n{_PHONE_FAR}"
         # Reporting a finished action needs no tools; offering them invites the model

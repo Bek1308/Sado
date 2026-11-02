@@ -19,6 +19,6 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PhoneControl.CONTACTS_REQUEST) phone.onContactsPermission()
+        if (requestCode == PhoneControl.PERMISSION_REQUEST) phone.onPermissionResult()
     }
 }

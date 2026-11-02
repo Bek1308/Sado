@@ -6,11 +6,18 @@ from fastapi.testclient import TestClient
 from sado.application.converse import Converse
 from sado.application.phone_tools import (
     PHONE_ALARM,
+    PHONE_CALENDAR,
     PHONE_CALL,
+    PHONE_EMAIL,
     PHONE_FLASHLIGHT,
+    PHONE_MEDIA,
     PHONE_MESSAGE,
+    PHONE_PLAY,
+    PHONE_SEARCH,
+    PHONE_SETTINGS,
     PHONE_TIMER,
     PHONE_TOOL_NAMES,
+    PHONE_VOLUME,
     run_phone_tool,
 )
 from sado.domain.conversation import (
@@ -54,6 +61,22 @@ def _call(spec: ToolSpec, **arguments: object) -> ToolCall:
             PhoneAction("timer", {"seconds": "30", "label": "Choy"}),
         ),
         (_call(PHONE_FLASHLIGHT, on=True), PhoneAction("flashlight", {"on": "true"})),
+        (_call(PHONE_VOLUME, change="Up"), PhoneAction("volume", {"change": "up"})),
+        (_call(PHONE_MEDIA, key="next"), PhoneAction("media", {"key": "next"})),
+        (_call(PHONE_PLAY, query="Shahzoda"), PhoneAction("play", {"query": "Shahzoda"})),
+        (
+            _call(PHONE_CALENDAR, title="Uchrashuv", start="2026-11-03T15:00:00+05:00"),
+            PhoneAction(
+                "calendar",
+                {"title": "Uchrashuv", "start": "2026-11-03T15:00:00+05:00", "minutes": "60"},
+            ),
+        ),
+        (
+            _call(PHONE_EMAIL, to="a@b.tj", subject="Salom", body="Matn"),
+            PhoneAction("email", {"to": "a@b.tj", "subject": "Salom", "body": "Matn"}),
+        ),
+        (_call(PHONE_SETTINGS, page="wifi"), PhoneAction("settings", {"page": "wifi"})),
+        (_call(PHONE_SEARCH, query="ob-havo"), PhoneAction("search", {"query": "ob-havo"})),
     ],
 )
 def test_phone_tools_become_actions_for_the_app(call: ToolCall, expected: PhoneAction) -> None:
@@ -72,6 +95,9 @@ def test_phone_tools_become_actions_for_the_app(call: ToolCall, expected: PhoneA
         _call(PHONE_TIMER, minutes=0),
         _call(PHONE_TIMER, minutes=True),
         _call(PHONE_FLASHLIGHT, on="yes"),
+        _call(PHONE_VOLUME, change="louder please"),
+        _call(PHONE_CALENDAR, title="Uchrashuv", start="tomorrow at 3"),
+        _call(PHONE_EMAIL, to="not an address", subject="", body=""),
     ],
 )
 def test_bad_arguments_do_nothing_and_say_why(call: ToolCall) -> None:

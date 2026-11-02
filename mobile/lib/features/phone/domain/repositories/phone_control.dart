@@ -6,4 +6,7 @@ abstract interface class PhoneControl {
   bool get supported;
 
   Future<PhoneOutcome> perform(PhoneAction action);
+
+  /// A line about the phone for Sado, e.g. "Battery 54%, charging."
+  Future<String> status();
 }
