@@ -47,6 +47,7 @@ from sado.infrastructure.settings import Settings, get_settings
 from sado.infrastructure.tts.mms import VitsVoiceSettings
 from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
+from sado.presentation.dependencies import Space
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import (
     actions,
@@ -129,6 +130,14 @@ def _backup_listener(settings: Settings, model_api: httpx.Client | None) -> Back
     if model_api is None:
         return None
     return BackupListener(model_api, settings.reasoning_model, reasoning_effort="low")
+
+
+def _guest_space(settings: Settings, model: ReasoningModel, search: WebSearch | None) -> Space:
+    """Sado for devices that are not the owner's: same mind, its own memory, no computer."""
+    memories = Memories(SqliteMemoryStore(settings.guest_db_path))
+    reminders = Reminders(SqliteReminderStore(settings.guest_db_path))
+    lists = Lists(SqliteListStore(settings.guest_db_path))
+    return Space(Converse(model, memories, reminders, search, lists), memories, reminders, lists)
 
 
 def _web_search(settings: Settings, model_api: httpx.Client | None) -> WebSearch | None:
@@ -217,19 +226,18 @@ def create_app(  # noqa: PLR0913
     transcribe_speech = TranscribeSpeech(packs)
     app.state.transcribe_speech = transcribe_speech
     saved = Memories(memory_store or SqliteMemoryStore(settings.memory_db_path))
-    app.state.memories = saved
     alarms = Reminders(reminder_store or SqliteReminderStore(settings.memory_db_path))
-    app.state.reminders = alarms
     model = reasoning_model or _default_reasoning_model(settings, model_api)
     search = web_search or _web_search(settings, model_api)
     shopping = Lists(list_store or SqliteListStore(settings.memory_db_path))
-    app.state.lists = shopping
     pending_actions = PendingActions()
     app.state.pending_actions = pending_actions
     computer = desktop or _desktop(settings)
     app.state.desktop_token = (desktop_token or _secret(settings.desktop_token)) if computer else ""
     hands = DesktopTools(computer, pending_actions) if computer else None
-    app.state.converse = Converse(model, saved, alarms, search, shopping, hands)
+    owner = Space(Converse(model, saved, alarms, search, shopping, hands), saved, alarms, shopping)
+    app.state.owner = owner
+    app.state.guest = _guest_space(settings, model, search) if app.state.desktop_token else owner
     # Vision reuses the same thinker; a custom text-only reasoner keeps talking
     # while document explanations report the service as unavailable.
     if document_explainer is None:

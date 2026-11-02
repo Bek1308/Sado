@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     clone_guidance_scale: float = 3.0
 
     memory_db_path: str = "data/memory.sqlite3"
+    # Once desktop control is on, devices without its token are guests, e.g. judges
+    # trying Sado through a tunnel: they get their own memories, reminders and lists here.
+    guest_db_path: str = "data/guests.sqlite3"
 
     meta_api_key: SecretStr | None = None
     meta_api_url: str = "https://api.meta.ai/v1"

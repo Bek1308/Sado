@@ -5,6 +5,10 @@ abstract final class AppConfig {
     defaultValue: 'http://10.0.2.2:8000',
   );
 
+  /// Where Sado turns when the main server is away, e.g. the laptop that
+  /// hosts it is closed. Empty means there is no backup.
+  static const backupApiBaseUrl = String.fromEnvironment('SADO_BACKUP_API_URL');
+
   /// Proves this build may drive the computer Sado runs on. Only the desktop
   /// app is built with it, so a phone can never control the computer.
   static const desktopToken = String.fromEnvironment('SADO_DESKTOP_TOKEN');

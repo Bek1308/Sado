@@ -16,6 +16,7 @@ from sado.application.desktop_tools import (
     DesktopTools,
     PendingActions,
 )
+from sado.application.memories import Memories
 from sado.domain.conversation import (
     Answer,
     Message,
@@ -29,6 +30,7 @@ from sado.domain.conversation import (
 from sado.domain.desktop import WindowInfo
 from sado.domain.errors import UnknownActionError
 from sado.domain.language import Language
+from sado.infrastructure.memory.sqlite_store import SqliteMemoryStore
 from sado.main import create_app
 from tests.fakes import fake_language_pack, fake_voice_catalog
 
@@ -284,3 +286,26 @@ def test_devices_without_the_token_cannot_touch_the_computer(headers: dict[str, 
     assert all(tool.name != LIST_WINDOWS.name for tool in model.tools[0])
     assert confirm.status_code == 403
     assert client.post("/actions/any/cancel").status_code == 403
+
+
+def test_guests_never_see_the_owners_memories() -> None:
+    owners = SqliteMemoryStore(":memory:")
+    Memories(owners).remember("The owner's PIN hint is the cat's name.")
+    pack, _ = fake_language_pack(Language.UZBEK)
+    app = create_app(
+        language_packs={Language.UZBEK: pack},
+        voice_catalog=fake_voice_catalog(),
+        reasoning_model=_Model(Answer("Salom")),
+        memory_store=owners,
+        desktop=_FakeDesktop(),
+        desktop_token=_TOKEN,
+    )
+    owner = TestClient(app, headers=_TRUSTED)
+    guest = TestClient(app)
+
+    guest.post("/memories", json={"text": "The judge likes green tea."})
+
+    assert [m["text"] for m in owner.get("/memories").json()] == [
+        "The owner's PIN hint is the cat's name."
+    ]
+    assert [m["text"] for m in guest.get("/memories").json()] == ["The judge likes green tea."]
