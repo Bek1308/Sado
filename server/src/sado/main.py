@@ -2,6 +2,7 @@
 
 import importlib
 import logging
+import re
 import threading
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -17,13 +18,15 @@ from sado.application.desktop_tools import DesktopTools, PendingActions
 from sado.application.explain_document import ExplainDocument
 from sado.application.lists import Lists
 from sado.application.memories import Memories
+from sado.application.phone_inbox import PhoneInbox
 from sado.application.reminders import Reminders
 from sado.application.speak_text import SpeakText
 from sado.application.transcribe_speech import TranscribeSpeech
 from sado.application.voices import VoiceCatalog
 from sado.domain.conversation import ReasoningModel
 from sado.domain.desktop import Desktop
-from sado.domain.errors import SadoError
+from sado.domain.errors import InvalidIdentityError, SadoError
+from sado.domain.identity import IdentityVerifier
 from sado.domain.language import Language
 from sado.domain.lists import ListStore
 from sado.domain.memory import MemoryStore
@@ -32,6 +35,7 @@ from sado.domain.search import WebSearch
 from sado.domain.speech import LanguagePack
 from sado.domain.vision import DocumentExplainer
 from sado.infrastructure.documents.readers import CompositeDocumentReader
+from sado.infrastructure.identity.firebase_identity import FirebaseIdentity
 from sado.infrastructure.languages.packs import (
     BackupListener,
     VoiceConfig,
@@ -47,7 +51,7 @@ from sado.infrastructure.settings import Settings, get_settings
 from sado.infrastructure.tts.mms import VitsVoiceSettings
 from sado.infrastructure.tts.omnivoice import CloneQuality
 from sado.infrastructure.tts.voice_presets import VOICE_PRESETS
-from sado.presentation.dependencies import Space
+from sado.presentation.dependencies import PersonalSpaces, Space
 from sado.presentation.error_handlers import register_error_handlers
 from sado.presentation.routers import (
     actions,
@@ -55,6 +59,7 @@ from sado.presentation.routers import (
     health,
     lists,
     memories,
+    phone,
     reminders,
     replies,
     speech,
@@ -133,11 +138,34 @@ def _backup_listener(settings: Settings, model_api: httpx.Client | None) -> Back
 
 
 def _guest_space(settings: Settings, model: ReasoningModel, search: WebSearch | None) -> Space:
-    """Sado for devices that are not the owner's: same mind, its own memory, no computer."""
-    memories = Memories(SqliteMemoryStore(settings.guest_db_path))
-    reminders = Reminders(SqliteReminderStore(settings.guest_db_path))
-    lists = Lists(SqliteListStore(settings.guest_db_path))
+    """Sado for devices that did not sign in: same mind, a shared guest memory."""
+    return _space_at(settings.guest_db_path, model, search)
+
+
+_PERSON_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _personal_space(
+    settings: Settings, person_id: str, model: ReasoningModel, search: WebSearch | None
+) -> Space:
+    """Sado for one signed-in person: their own memory, reminders and lists, no computer."""
+    # Firebase ids are letters and digits; anything else must never become a file path.
+    if not _PERSON_ID.match(person_id):
+        raise InvalidIdentityError
+    return _space_at(str(Path(settings.people_dir) / f"{person_id}.sqlite3"), model, search)
+
+
+def _space_at(db_path: str, model: ReasoningModel, search: WebSearch | None) -> Space:
+    memories = Memories(SqliteMemoryStore(db_path))
+    reminders = Reminders(SqliteReminderStore(db_path))
+    lists = Lists(SqliteListStore(db_path))
     return Space(Converse(model, memories, reminders, search, lists), memories, reminders, lists)
+
+
+def _identity(settings: Settings) -> IdentityVerifier | None:
+    if not settings.firebase_project_id.strip():
+        return None
+    return FirebaseIdentity(settings.firebase_project_id.strip())
 
 
 def _web_search(settings: Settings, model_api: httpx.Client | None) -> WebSearch | None:
@@ -203,6 +231,7 @@ def create_app(  # noqa: PLR0913
     list_store: ListStore | None = None,
     desktop: Desktop | None = None,
     desktop_token: str | None = None,
+    identity: IdentityVerifier | None = None,
 ) -> FastAPI:
     settings = get_settings()
     catalog = voice_catalog or _voice_catalog(settings.default_voice)
@@ -237,7 +266,17 @@ def create_app(  # noqa: PLR0913
     hands = DesktopTools(computer, pending_actions) if computer else None
     owner = Space(Converse(model, saved, alarms, search, shopping, hands), saved, alarms, shopping)
     app.state.owner = owner
-    app.state.guest = _guest_space(settings, model, search) if app.state.desktop_token else owner
+    app.state.identity = identity or _identity(settings)
+    app.state.owner_emails = frozenset(
+        email.strip().lower() for email in settings.owner_emails.split(",") if email.strip()
+    )
+    app.state.phone_inbox = PhoneInbox()
+    # With nothing to tell people apart, one person uses Sado and it is the owner.
+    strangers_possible = bool(app.state.desktop_token or app.state.identity)
+    app.state.guest = _guest_space(settings, model, search) if strangers_possible else owner
+    app.state.people = PersonalSpaces(
+        lambda person_id: _personal_space(settings, person_id, model, search)
+    )
     # Vision reuses the same thinker; a custom text-only reasoner keeps talking
     # while document explanations report the service as unavailable.
     if document_explainer is None:
@@ -260,6 +299,7 @@ def create_app(  # noqa: PLR0913
     app.include_router(reminders.router)
     app.include_router(lists.router)
     app.include_router(actions.router)
+    app.include_router(phone.router)
     return app
 
 

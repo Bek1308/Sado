@@ -5,10 +5,16 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, model_validator
 
 from sado.application.converse import Converse
+from sado.application.phone_inbox import PhoneInbox
 from sado.domain.conversation import Message, Speaker
 from sado.domain.language import Language
 from sado.domain.mode import Mode
-from sado.presentation.dependencies import get_converse, may_control_desktop
+from sado.presentation.dependencies import (
+    at_the_computer,
+    get_converse,
+    get_phone_inbox,
+    may_control_desktop,
+)
 
 router = APIRouter(prefix="/replies", tags=["conversation"])
 
@@ -68,8 +74,12 @@ def reply(
     request: ReplyRequest,
     converse: Annotated[Converse, Depends(get_converse)],
     trusted: Annotated[bool, Depends(may_control_desktop)],
+    computer: Annotated[bool, Depends(at_the_computer)],
+    inbox: Annotated[PhoneInbox, Depends(get_phone_inbox)],
 ) -> ReplyResponse:
-    return answer(request, converse, allow_desktop=trusted)
+    # At the computer, phone actions go to the owner's phone to carry out.
+    far_phone = inbox if computer and not request.phone else None
+    return answer(request, converse, allow_desktop=trusted, far_phone=far_phone)
 
 
 def answer(
@@ -78,6 +88,7 @@ def answer(
     action_result: str | None = None,
     *,
     allow_desktop: bool,
+    far_phone: PhoneInbox | None = None,
 ) -> ReplyResponse:
     conversation = [Message(message.speaker, message.text) for message in request.messages]
     reply = converse.execute(
@@ -88,7 +99,10 @@ def answer(
         action_result,
         allow_desktop=allow_desktop,
         phone=request.phone,
+        phone_far=far_phone is not None,
     )
+    if far_phone is not None:
+        far_phone.post(reply.phone_actions)
     pending = reply.pending_action
     return ReplyResponse(
         reply=reply.text,
@@ -101,5 +115,6 @@ def answer(
         phone_actions=[
             PhoneActionModel(kind=action.kind, details=dict(action.details))
             for action in reply.phone_actions
+            if far_phone is None
         ],
     )

@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # Once desktop control is on, devices without its token are guests, e.g. judges
     # trying Sado through a tunnel: they get their own memories, reminders and lists here.
     guest_db_path: str = "data/guests.sqlite3"
+    # Sign-in with Google through Firebase: everyone who signs in gets their own memory
+    # under people_dir, and a phone signed in with one of the owner's addresses
+    # (comma-separated) is the owner's and may drive the computer.
+    firebase_project_id: str = ""
+    owner_emails: str = ""
+    people_dir: str = "data/people"
 
     meta_api_key: SecretStr | None = None
     meta_api_url: str = "https://api.meta.ai/v1"

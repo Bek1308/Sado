@@ -134,3 +134,10 @@ class DesktopUnavailableError(SadoError):
 class UnknownActionError(SadoError):
     def __init__(self, action_id: str) -> None:
         super().__init__(f"No action waiting with id '{action_id}'")
+
+
+class InvalidIdentityError(SadoError):
+    """A sign-in token that is forged, expired or meant for another app."""
+
+    def __init__(self) -> None:
+        super().__init__("Please sign in again")
