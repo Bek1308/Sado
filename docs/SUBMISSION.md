@@ -49,4 +49,4 @@ Sado is a voice-first companion you simply talk to.
 ## Links
 
 - Code: https://github.com/Bek1308/Sado
-- Demo video: _(paste the YouTube link)_
+- Demo video: https://youtu.be/kC3cya5tfrU

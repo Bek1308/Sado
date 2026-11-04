@@ -233,7 +233,7 @@ Sado is being built live during the hackathon. All code in this repository was w
 - [x] Live talk: hands-free conversation, silence ends the turn
 - [x] Computer companion: tray app, hotkey, voice wave; reads and drives windows and terminal agents, asking before it acts
 - [ ] Hosted backend for judges
-- [ ] Demo video
+- [x] Demo video: [watch on YouTube](https://youtu.be/kC3cya5tfrU)
 
 ---
 
