@@ -31,6 +31,12 @@ const Map<SpokenLanguage, List<String>> _prompts = {
   ],
 };
 
+const List<IconData> _icons = [
+  Icons.wb_sunny_rounded,
+  Icons.shopping_basket_rounded,
+  Icons.alarm_rounded,
+];
+
 /// The languages Sado speaks, and a few things to ask it in the chosen one.
 class StarterPrompts extends ConsumerWidget {
   const StarterPrompts({super.key});
@@ -73,23 +79,74 @@ class StarterPrompts extends ConsumerWidget {
         Column(
           spacing: AppSpacing.sm,
           children: [
-            for (final prompt in _prompts[language]!)
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    side: BorderSide(color: colors.outlineVariant),
-                  ),
-                  icon: const Icon(Icons.north_east_rounded, size: 18),
-                  label: Text(prompt),
-                  onPressed: () => _ask(ref, prompt),
-                ),
+            for (final (index, prompt) in _prompts[language]!.indexed)
+              _PromptCard(
+                icon: _icons[index % _icons.length],
+                text: prompt,
+                colors: colors,
+                onTap: () => _ask(ref, prompt),
               ),
           ],
         ),
       ],
+    );
+  }
+}
+
+/// One thing to ask Sado, as a soft card with its own icon.
+class _PromptCard extends StatelessWidget {
+  const _PromptCard({
+    required this.icon,
+    required this.text,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String text;
+  final ColorScheme colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: colors.surfaceContainerHigh.withValues(alpha: 0.7),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            spacing: AppSpacing.md,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 20, color: colors.primary),
+              ),
+              Expanded(
+                child: Text(
+                  text,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: colors.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

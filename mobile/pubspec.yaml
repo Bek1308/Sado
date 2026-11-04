@@ -34,3 +34,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/tray_icon.ico
+  shaders:
+    - shaders/sado_sphere.frag

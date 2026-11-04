@@ -36,6 +36,8 @@ class HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
     final bar = AppBar(
       toolbarHeight: _height,
+      // The page's soft gradient shows through.
+      backgroundColor: Colors.transparent,
       titleSpacing: AppSpacing.lg,
       title: const Row(
         spacing: AppSpacing.md,

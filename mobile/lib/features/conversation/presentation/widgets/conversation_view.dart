@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/core/theme/app_spacing.dart';
+import 'package:sado/core/theme/app_theme.dart';
+import 'package:sado/core/widgets/sado_orb.dart';
 import 'package:sado/features/conversation/domain/entities/chat_message.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
-import 'package:sado/features/conversation/presentation/widgets/sado_face.dart';
+import 'package:sado/features/conversation/presentation/widgets/sado_sphere.dart';
 import 'package:sado/features/conversation/presentation/widgets/starter_prompts.dart';
 import 'package:sado/features/memory/presentation/providers/memory_providers.dart';
 import 'package:sado/features/speech/domain/entities/expression_cue.dart';
@@ -60,19 +62,25 @@ class _Welcome extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showFace) ...[
-              const SadoFace(),
-              const SizedBox(height: AppSpacing.xxl),
+              const SadoSphere(size: 220),
+              const SizedBox(height: AppSpacing.md),
             ],
-            Text(
-              'One voice. Every language.',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: AppTheme.brandGradient,
+              ).createShader(bounds),
+              child: Text(
+                "Hi, I'm Sado",
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Tap the mic and talk to Sado, or type a message.',
+              'Talk in your own language. I listen, act and remember.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -101,63 +109,91 @@ class _Bubble extends ConsumerWidget {
     const round = Radius.circular(AppRadius.lg);
     const tail = Radius.circular(AppRadius.tail);
 
-    return Align(
-      alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: () => _showActions(context, ref),
-        child: Container(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          decoration: BoxDecoration(
-            color: fromUser ? colors.primary : colors.surfaceContainerHigh,
-            borderRadius: BorderRadius.only(
-              topLeft: round,
-              topRight: round,
-              bottomLeft: fromUser ? round : tail,
-              bottomRight: fromUser ? tail : round,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              fromUser ? AppSpacing.lg : AppSpacing.xs,
-              fromUser ? AppSpacing.md : AppSpacing.xs,
-            ),
-            child: fromUser
-                ? Text(
-                    message.text,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: colors.onPrimary,
+    final bubble = GestureDetector(
+      onLongPress: () => _showActions(context, ref),
+      child: Container(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        decoration: BoxDecoration(
+          color: fromUser ? null : colors.surfaceContainerHigh,
+          gradient: fromUser
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: AppTheme.brandGradient,
+                )
+              : null,
+          boxShadow: fromUser
+              ? [
+                  BoxShadow(
+                    color: AppTheme.brandGradient.first.withValues(
+                      alpha: 0.25,
                     ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Text(
-                            ExpressionCue.withoutCues(message.text),
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Play again',
-                        visualDensity: VisualDensity.compact,
-                        iconSize: 20,
-                        color: colors.onSurfaceVariant,
-                        icon: const Icon(Icons.volume_up_outlined),
-                        onPressed: () => ref
-                            .read(speakControllerProvider.notifier)
-                            .say(message.text),
-                      ),
-                    ],
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
+                ]
+              : null,
+          borderRadius: BorderRadius.only(
+            topLeft: round,
+            topRight: round,
+            bottomLeft: fromUser ? round : tail,
+            bottomRight: fromUser ? tail : round,
           ),
         ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            fromUser ? AppSpacing.lg : AppSpacing.xs,
+            fromUser ? AppSpacing.md : AppSpacing.xs,
+          ),
+          child: fromUser
+              ? Text(
+                  message.text,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.onPrimary,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: Text(
+                          ExpressionCue.withoutCues(message.text),
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Play again',
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 20,
+                      color: colors.onSurfaceVariant,
+                      icon: const Icon(Icons.volume_up_outlined),
+                      onPressed: () => ref
+                          .read(speakControllerProvider.notifier)
+                          .say(message.text),
+                    ),
+                  ],
+                ),
+        ),
       ),
+    );
+
+    if (fromUser) {
+      return Align(alignment: Alignment.centerRight, child: bubble);
+    }
+    // Sado's words come with its mark, like a name beside a message.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      spacing: AppSpacing.sm,
+      children: [
+        const SadoOrb(size: 28),
+        Flexible(child: bubble),
+      ],
     );
   }
 

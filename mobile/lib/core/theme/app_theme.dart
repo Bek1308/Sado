@@ -57,8 +57,9 @@ abstract final class AppTheme {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
+        // A pill, like the message fields people know from chat apps.
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: BorderRadius.circular(28),
           borderSide: BorderSide.none,
         ),
       ),

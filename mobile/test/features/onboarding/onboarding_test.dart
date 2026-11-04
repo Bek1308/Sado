@@ -64,7 +64,7 @@ void main() {
     await tester.tap(find.text('Start talking'));
     await _settle(tester);
 
-    expect(find.text('One voice. Every language.'), findsOneWidget);
+    expect(find.text("Hi, I'm Sado"), findsOneWidget);
     expect(preferences.getBool('onboarding_done'), isTrue);
   });
 
@@ -74,6 +74,6 @@ void main() {
     await _pumpApp(tester, await _preferences({'onboarding_done': true}));
 
     expect(find.text('Talk in your own language'), findsNothing);
-    expect(find.text('One voice. Every language.'), findsOneWidget);
+    expect(find.text("Hi, I'm Sado"), findsOneWidget);
   });
 }

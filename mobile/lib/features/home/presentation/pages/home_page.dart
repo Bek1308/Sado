@@ -5,10 +5,13 @@ import 'package:sado/core/desktop/desktop_host.dart';
 import 'package:sado/core/error/failure.dart';
 import 'package:sado/core/router/app_router.dart';
 import 'package:sado/core/theme/app_spacing.dart';
+import 'package:sado/core/theme/app_theme.dart';
 import 'package:sado/features/conversation/domain/entities/sado_reply.dart';
 import 'package:sado/features/conversation/presentation/providers/conversation_providers.dart';
+import 'package:sado/features/conversation/presentation/providers/live_providers.dart';
 import 'package:sado/features/conversation/presentation/widgets/action_confirmation.dart';
 import 'package:sado/features/conversation/presentation/widgets/conversation_view.dart';
+import 'package:sado/features/conversation/presentation/widgets/live_stage.dart';
 import 'package:sado/features/desktop/presentation/widgets/desktop_stage.dart';
 import 'package:sado/features/home/presentation/widgets/composer.dart';
 import 'package:sado/features/home/presentation/widgets/home_app_bar.dart';
@@ -20,11 +23,56 @@ import 'package:sado/features/vision/presentation/providers/vision_providers.dar
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
+  static const _stageFade = Duration(milliseconds: 450);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     _reportProblems(context, ref);
+    // On a phone a live conversation takes the whole screen; the computer
+    // shows its own slim voice bar instead.
+    final staged =
+        !ref.watch(isDesktopProvider) &&
+        ref.watch(liveConversationProvider.select((live) => live.isLive));
 
+    return AnimatedSwitcher(
+      duration: _stageFade,
+      switchInCurve: Curves.easeOutCubic,
+      child: staged
+          ? const Scaffold(key: ValueKey('live'), body: LiveStage())
+          : _chat(context, ref),
+    );
+  }
+
+  Widget _chat(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    // A faint wash of Sado's blue and violet from the top, like light
+    // falling on the page.
+    return DecoratedBox(
+      key: const ValueKey('chat'),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.alphaBlend(
+              AppTheme.brandGradient.last.withValues(alpha: 0.10),
+              colors.surface,
+            ),
+            colors.surface,
+            Color.alphaBlend(
+              AppTheme.brandGradient.first.withValues(alpha: 0.06),
+              colors.surface,
+            ),
+          ],
+        ),
+      ),
+      child: _chatScaffold(context, ref),
+    );
+  }
+
+  Widget _chatScaffold(BuildContext context, WidgetRef ref) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       // The composer follows the keyboard itself, so the conversation keeps
       // its height and only the input moves.
       resizeToAvoidBottomInset: false,

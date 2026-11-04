@@ -56,7 +56,7 @@ void main() {
   ) async {
     await _pumpHomePage(tester, _online);
 
-    expect(find.text('One voice. Every language.'), findsOneWidget);
+    expect(find.text("Hi, I'm Sado"), findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
     expect(find.byTooltip('Talk to Sado'), findsOneWidget);
   });
@@ -106,7 +106,9 @@ void main() {
 
     expect(find.text('Bugun havo qanday?'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Тоҷикӣ'));
+    final tajik = find.widgetWithText(ChoiceChip, 'Тоҷикӣ');
+    await tester.ensureVisible(tajik);
+    await tester.tap(tajik);
     await _settle(tester);
 
     expect(find.text('Имрӯз ҳаво чӣ хел аст?'), findsOneWidget);

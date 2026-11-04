@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sado/core/theme/app_theme.dart';
 import 'package:sado/features/conversation/presentation/providers/live_providers.dart';
 
 /// Starts a hands-free conversation with Sado; tap again to stop it.
@@ -17,10 +18,28 @@ class MicButton extends ConsumerWidget {
     if (!live.isLive) {
       return SizedBox.square(
         dimension: size,
-        child: IconButton.filled(
-          tooltip: 'Talk to Sado',
-          icon: const Icon(Icons.mic_rounded),
-          onPressed: controller.start,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: AppTheme.brandGradient,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.brandGradient.first.withValues(alpha: 0.4),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: IconButton(
+            tooltip: 'Talk to Sado',
+            color: Colors.white,
+            icon: const Icon(Icons.mic_rounded),
+            onPressed: controller.start,
+          ),
         ),
       );
     }
