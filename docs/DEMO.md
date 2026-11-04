@@ -1,52 +1,55 @@
 # Demo script — 3 minutes
 
-Goal: show a judge, in three minutes, that Sado is a real agent people can talk to in languages no AI assistant serves today — and that it runs on Meta's models.
+Goal: show a judge, in three minutes, that Sado is a real agent people can talk to in languages no AI assistant serves today, that it does things on the phone and the computer instead of only talking, and that it runs on Meta's models.
 
-Record on a real phone, screen-captured, with the phone's own audio. Every Sado line below is generated live; do not script its answers, only the user's lines. Use sample documents only, never real personal papers.
+Record the phone with its own screen recorder (with audio) and the laptop with Xbox Game Bar (Win+Alt+R). Every Sado line is generated live; script only the user's lines. Use sample contacts and documents, never real personal ones. Before recording: phone signed in with the owner's Google account, laptop server running, Sado open on the phone.
 
-## 0:00–0:20 — The problem
+## 0:00–0:15 — The problem
 
 - Title card: **Sado — One voice. Every language.**
-- Voice-over (English, subtitled): "AI assistants speak about 25 languages. Tajik and Uzbek aren't among them. Meta's own speech API doesn't cover them, and the Model API can't speak at all. Sado fixes that."
+- Voice-over (English, subtitled): "AI assistants speak about 25 languages. Tajik and Uzbek aren't among them. Sado hears them, speaks them, and gets things done."
 
-## 0:20–1:10 — Scene 1: At home (Uzbek, hands-free)
+## 0:15–1:00 — Scene 1: The living sphere (phone, Uzbek, hands-free)
 
-1. Mode: **Home**. Tap the mic once to start live talk.
-2. User: *"Salom Sado! Ertaga soat 9 da shifokorga borishim kerak, eslatib qo'y."*
-3. Sado answers in Uzbek and sets the reminder; the app shows **Reminder set**.
-4. Without touching the phone: *"Qizim Malika 12-mayda tug'ilgan, eslab qol."*
-5. Sado saves it; the app shows **Saved to memories**.
-6. Open **Memories**: the fact is there, in the user's words. Swipe to show it can be deleted.
+1. Show the home screen: the 3D sphere, "Hi, I'm Sado", the prompt cards.
+2. Tap the mic: the screen turns to night and the sphere grows. Speak and let the camera catch it rippling with your voice.
+3. User: *"Salom Sado! Ertaga soat 9 da shifokorga borishim kerak, eslatib qo'y."* — the sphere turns violet as Sado answers and sets the reminder.
+4. User: *"Sherali Jo'rayevning qo'shig'ini qo'y."* — music starts playing.
+5. User: *"Ovozni pasaytir."* — the volume drops.
 
-On-screen captions: *Meta Omnilingual ASR → Muse Spark (tool calls) → Sado's voice*.
+Caption: *Meta Omnilingual ASR → Muse Spark (tool calls) → Sado's voice.*
 
-## 1:10–2:00 — Scene 2: On the go (Tajik, camera)
+## 1:00–1:35 — Scene 2: It acts, and asks first (phone)
 
-1. Mode: **On the go**.
-2. Photograph a sample Russian utility notice (debt, account number, due date).
-3. Sado explains it in Tajik: who sent it, how much, by when, what to do.
-4. User (Tajik): *"Инро ба ман то санаи охирин хотиррасон кун."*
-5. Sado sets the reminder.
+1. User: *"Onamga qo'ng'iroq qil."* — Sado finds "Onam" in the contacts and asks.
+2. User: *"Ha."* — the call starts. Hang up after a ring (use a sample contact you own).
+3. User: *"Telefonim zaryadi qancha qoldi?"* — Sado answers from the phone's own battery.
 
-Caption: *A Russian paper, explained in Tajik, by voice.*
+Caption: *Calls and texts only after your yes. Contacts never leave the phone.*
 
-## 2:00–2:40 — Scene 3: At work (Russian or English, document)
+## 1:35–2:25 — Scene 3: Call it by name (laptop)
 
-1. Mode: **Work**.
-2. Share a sample contract PDF.
-3. User: *"What do I have to pay, and by when?"*
-4. Short, professional answer with the amount and date.
-5. Switch mode to **Personal** and ask the same in Uzbek to show the tone and language change.
+1. Laptop on the desktop, nothing of Sado on screen. Say: **"Sado!"** — the slim voice bar rises.
+2. User: *"Ekranimda nima bor?"* with an error dialog open — Sado reads it and explains.
+3. User: *"Terminaldagi agent nima qilyapti?"* — Sado reads the coding agent's last answer aloud.
+4. User: *"Unga yoz: testlarni ishga tushir."* — Sado asks, you say *"Ha"*, the task appears in the terminal.
 
-## 2:40–3:00 — Close
+Caption: *The name is heard on the laptop, offline. Typing and commands wait for your yes.*
 
-- Quick montage: robot face reacting (listening, thinking, speaking), voice and mood picker.
-- Voice-over: "Sado hears with Meta Omnilingual ASR, thinks with Muse Spark, and was partly built with Muse Code. One voice. Every language."
-- End card: GitHub link, team, hackathon name.
+## 2:25–2:50 — Scene 4: One Sado, two devices
 
-## Before recording
+1. On the laptop: *"Telefonimga bir daqiqaga taymer qo'y."* — cut to the phone: the clock's timer is running.
+2. On the phone: *"Kompyuterda qaysi oynalar ochiq?"* — Sado lists the laptop's windows.
 
-- Server, ASR worker and tunnel running; check `/health` from the phone.
-- Clear memories and reminders so the screens start empty.
-- Phone in Do Not Disturb, brightness up, battery above 50%.
-- Do one full dry run; note any answer slower than 10 seconds and cut the wait in editing.
+Caption: *Signed in with Google, phone and laptop reach each other. Everyone else gets their own Sado.*
+
+## 2:50–3:00 — Close
+
+- Title card: **Sado** — Tajik · Uzbek · Russian · English, on Meta Muse Spark, Omnilingual ASR and MMS.
+- GitHub link.
+
+## Recording tips
+
+- Speak clearly at arm's length from the phone; wait for the sphere to settle before the next line.
+- If an answer is slow, cut the wait in editing rather than re-asking.
+- Keep the phone in dark mode so the night screen and the sphere stand out.
