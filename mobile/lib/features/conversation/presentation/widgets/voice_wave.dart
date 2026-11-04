@@ -27,7 +27,8 @@ class _VoiceWaveState extends ConsumerState<VoiceWave>
   static const _sampleEvery = Duration(milliseconds: 45);
 
   late final Ticker _ticker;
-  final _levels = List<double>.filled(_bars, 0);
+  // Growable, because every sample drops the oldest bar and adds a new one.
+  final _levels = List<double>.filled(_bars, 0, growable: true);
   StreamSubscription<double>? _voice;
   double _voiceLevel = 0;
   Duration _lastSample = Duration.zero;
