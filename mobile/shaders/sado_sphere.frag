@@ -16,30 +16,16 @@ uniform float uThink;
 
 out vec4 fragColor;
 
-float hash(vec3 p) {
-    p = fract(p * 0.3183099 + 0.1);
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-
-float noise(vec3 x) {
-    vec3 i = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-        mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
-            mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
-        mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
-            mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y),
-        f.z);
-}
-
+// Sums of sines rather than lattice noise: lattice cells showed as seams
+// on phone GPUs, while sines stay smooth at any precision. Every time
+// frequency is a multiple of 0.1, so the shape repeats seamlessly when the
+// clock wraps.
 float surface(vec3 p) {
     float t = uTime;
     // Nearly round at rest; the voice raises soft waves, never sharp lumps.
-    float ripple = 0.025 + 0.2 * uLevel;
-    float n = noise(p * 1.6 + vec3(0.0, t * 0.6, t * 0.35)) * 2.0 - 1.0;
-    n += (noise(p * 3.2 - vec3(t * 0.8)) * 2.0 - 1.0) * 0.35;
+    float ripple = 0.03 + 0.2 * uLevel;
+    float n = sin(p.x * 2.1 + t * 0.9) * sin(p.y * 2.3 - t * 0.7) * sin(p.z * 1.9 + t * 0.5);
+    n += 0.35 * sin(dot(p, vec3(3.1, -2.7, 2.3)) + t * 1.3);
     return length(p) - 1.0 - ripple * n;
 }
 
@@ -64,19 +50,30 @@ void main() {
     float travelled = 0.0;
     bool hit = false;
     vec3 p = origin;
-    for (int i = 0; i < 48; i++) {
+    // The closest the ray came to the surface, to soften the silhouette
+    // instead of leaving a jagged one-pixel edge.
+    float closest = 1e3;
+    vec3 nearest = origin;
+    for (int i = 0; i < 64; i++) {
         p = origin + ray * travelled;
         p.xz = turn * p.xz;
         float d = surface(p);
-        if (d < 0.002) {
+        if (d < closest) {
+            closest = d;
+            nearest = p;
+        }
+        if (d < 0.001) {
             hit = true;
             break;
         }
-        travelled += d * 0.8;
+        travelled += d * 0.7;
         if (travelled > 6.0) {
             break;
         }
     }
+    float pixel = 5.0 / min(uSize.x, uSize.y);
+    float coverage = hit ? 1.0 : 1.0 - smoothstep(0.0, pixel, closest);
+    p = hit ? p : nearest;
 
     vec3 blue = vec3(0.0, 0.51, 0.98);
     vec3 deep = vec3(0.0, 0.25, 0.70);
@@ -86,7 +83,7 @@ void main() {
 
     vec3 colour = vec3(0.0);
     float alpha = 0.0;
-    if (hit) {
+    if (coverage > 0.0) {
         vec3 n = normalAt(p);
         vec3 light = normalize(vec3(-0.5, 0.8, 0.6));
         float diffuse = max(dot(n, light), 0.0);
@@ -99,7 +96,7 @@ void main() {
             + mix(tone, violet, bands) * 0.18 * bands
             + rim * mix(cyan, violet, 0.35) * 0.6
             + pow(max(dot(reflect(-light, n), -ray), 0.0), 40.0) * 0.45;
-        alpha = 1.0;
+        alpha = coverage;
     }
 
     // A round halo that hugs the ball and is gone well before the square's

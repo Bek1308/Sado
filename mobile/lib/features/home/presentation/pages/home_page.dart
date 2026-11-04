@@ -142,6 +142,9 @@ void _confirmActions(BuildContext context, SadoReply reply) {
     ..showSnackBar(
       SnackBar(
         content: Text(notes.join('\n')),
+        // A note with an action would otherwise stay until tapped and cover
+        // the next answer.
+        persist: false,
         action: SnackBarAction(
           label: 'View',
           onPressed: () => context.push(AppRoutes.memories),

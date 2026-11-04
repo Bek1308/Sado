@@ -101,7 +101,9 @@ class _SadoSphereState extends ConsumerState<SadoSphere>
   @override
   Widget build(BuildContext context) {
     final shader = _shader;
-    final time = _elapsed.inMicroseconds / 1e6;
+    // Large times lose precision on phone GPUs; the shader's motion repeats
+    // every 20π seconds, so wrapping there is invisible.
+    final time = (_elapsed.inMicroseconds / 1e6) % (20 * math.pi);
     return Semantics(
       label: 'Sado',
       child: SizedBox.square(
